@@ -1,0 +1,11 @@
+[Mon Sep 11 23:00:18.975298 2017] [:error] [pid 6864:tid 1896] [client 127.0.0.1:1925] PHP Parse error:  syntax error, unexpected T_OBJECT_OPERATOR in W:\\www\\parsyii.org\\html\\web\\index.php on line 12
+[Mon Sep 11 23:00:19.849330 2017] [:error] [pid 6864:tid 1892] [client 127.0.0.1:1926] PHP Parse error:  syntax error, unexpected T_OBJECT_OPERATOR in W:\\www\\parsyii.org\\html\\web\\index.php on line 12
+[Mon Sep 11 23:00:20.267354 2017] [:error] [pid 6864:tid 1896] [client 127.0.0.1:1927] PHP Parse error:  syntax error, unexpected T_OBJECT_OPERATOR in W:\\www\\parsyii.org\\html\\web\\index.php on line 12
+[Mon Sep 11 23:00:20.553370 2017] [:error] [pid 6864:tid 1892] [client 127.0.0.1:1928] PHP Parse error:  syntax error, unexpected T_OBJECT_OPERATOR in W:\\www\\parsyii.org\\html\\web\\index.php on line 12
+[Mon Sep 11 23:00:20.737381 2017] [:error] [pid 6864:tid 1896] [client 127.0.0.1:1929] PHP Parse error:  syntax error, unexpected T_OBJECT_OPERATOR in W:\\www\\parsyii.org\\html\\web\\index.php on line 12
+[Mon Sep 11 23:00:43.991981 2017] [:error] [pid 6864:tid 1892] [client 127.0.0.1:1931] PHP Parse error:  syntax error, unexpected T_OBJECT_OPERATOR in W:\\www\\parsyii.org\\html\\web\\index.php on line 12
+[Mon Sep 11 23:00:49.169152 2017] [:error] [pid 6864:tid 1896] [client 127.0.0.1:1932] PHP Parse error:  syntax error, unexpected T_OBJECT_OPERATOR in W:\\www\\parsyii.org\\html\\web\\index.php on line 12
+[Mon Sep 11 23:14:32.657729 2017] [:error] [pid 6864:tid 1896] [client 127.0.0.1:1984] PHP Parse error:  syntax error, unexpected T_OBJECT_OPERATOR in W:\\www\\parsyii.org\\html\\web\\index.php on line 12
+[Mon Sep 11 23:35:47.876791 2017] [:error] [pid 6864:tid 1892] [client 127.0.0.1:2118] PHP Parse error:  syntax error, unexpected T_OBJECT_OPERATOR in W:\\www\\parsyii.org\\html\\web\\index.php on line 12
+[Mon Sep 11 23:36:07.261082 2017] [:error] [pid 6608:tid 1856] [client 127.0.0.1:2120] PHP Parse error:  syntax error, unexpected T_OBJECT_OPERATOR in W:\\www\\parsyii.org\\html\\web\\index.php on line 12
+[Tue Sep 12 23:46:00.158072 2017] [:error] [pid 2536:tid 1756] [client 127.0.0.1:1074] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in W:\\www\\parsyii.org\\html\\vendor\\yiisoft\\yii2\\web\\Session.php on line 74, referer: http://www.parsyii.org/index.php?r=site%2Fsourcesite
