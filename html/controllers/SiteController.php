@@ -123,4 +123,14 @@ class SiteController extends Controller
     {
         return $this->render('about');
     }
+
+        /** SAVA
+     * отображение страницы ввода/добавления исходного сайта
+     *
+     * @return string
+     */
+    public function actionSourceSite()
+    {
+        return $this->render('v_sourcesite');
+    }
 }
