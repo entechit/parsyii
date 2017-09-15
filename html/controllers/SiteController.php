@@ -9,6 +9,7 @@ use yii\web\Response;
 use yii\filters\VerbFilter;
 use app\models\LoginForm;
 use app\models\ContactForm;
+use app\models\SourceSiteForm;
 
 class SiteController extends Controller
 {
@@ -129,8 +130,9 @@ class SiteController extends Controller
      *
      * @return string
      */
-    public function actionSourceSite()
+    public function actionSourcesite()
     {
-        return $this->render('v_sourcesite');
+        $model = new SourceSiteForm();
+        return $this->render('v_sourcesite', ['model' => $model,]);
     }
 }
