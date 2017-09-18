@@ -135,4 +135,12 @@ class SiteController extends Controller
         $model = new SourceSiteForm();
         return $this->render('v_sourcesite', ['model' => $model,]);
     }
+
+    public function actionGetsourcesitelist()
+    {
+        $model = new SourceSiteForm();
+        $res = $model->getdata();
+        return $this->render('v_sourcesite', ['model' => $model, 'res' => $res,]);
+    }
+
 }
