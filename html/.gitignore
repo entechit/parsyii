@@ -1,4 +1,4 @@
-.logs
+/logs
 # phpstorm project files
 .idea
 
