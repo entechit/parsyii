@@ -4,6 +4,8 @@ namespace app\models;
 
 use Yii;
 use yii\base\Model;
+use yii\helpers\ArrayHelper;
+use yii\data\SqlDataProvider;
 
 /**
  * ContactForm is the model behind the contact form.
@@ -11,7 +13,7 @@ use yii\base\Model;
 class SourceSiteForm extends Model
 {
     public $ss_url;
-    public $ss_format;
+    public $ss_dc_id;
     public $ss_descript;
     public $db;
 
@@ -35,8 +37,24 @@ class SourceSiteForm extends Model
     }
 
     // выгребаем пока что все из таблицы источников сайта
-    public function getdata(){
-        $posts = Yii::$app->db->createCommand('SELECT * FROM source_site')->queryAll();
-        return $posts;
+    public function getdata_ss(){
+
+        $dataProvider = new SqlDataProvider([
+            'sql' => 'SELECT ss.*, dc.dc_name '.
+                'FROM source_site ss Left join dir_cms dc on ss.ss_dc_id = dc.dc_id ' .
+                'ORDER BY ss.ss_url',
+            'pagination' => [
+                'pagesize' => 1,
+            ],
+        ]);
+       // $posts = Yii::$app->db->createCommand('SELECT * FROM source_site')->queryAll();
+        return $dataProvider;
     }
+
+       // выгребаем пока что все из таблицы типов CMS
+    public function getdata_dc(){
+        $posts = Yii::$app->db->createCommand('SELECT * FROM dir_cms order by dc_name')->queryAll();
+        return ArrayHelper::map($posts,'dc_id','dc_name'); 
+    }
+
 }

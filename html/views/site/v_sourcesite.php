@@ -6,6 +6,7 @@
 
 use yii\helpers\Html;
 use yii\bootstrap\ActiveForm;
+use yii\grid\GridView;
 
 $this->title = 'Сайт Донор';
 $this->params['breadcrumbs'][] = $this->title;
@@ -25,18 +26,14 @@ $this->params['breadcrumbs'][] = $this->title;
 
                     <?= $form->field($model, 'ss_url')->textInput(['autofocus' => true]) ->label('URL анализируемого сайта ') ; ?>
 
-                    <?= $form->field($model, 'ss_format')->dropdownList(
-                        [
-                        'PrestaShop' => 'PrestaShop',
-                        'WebAsyst Shop-Script' => 'WebAsyst Shop-Script',
-                        'OpenCart' => 'OpenCart'
-                        ],
-                        ['options' =>[ 'PrestaShop' => ['Selected' => true]]]) -> label('CMS на котором построен сайт') ?>
+                    <?= $form->field($model, 'ss_dc_id')->dropdownList(
+                        $data_dcs,
+                        ['options' =>[ '1' => ['Selected' => true]]]) -> label('CMS на котором построен сайт') ?>
 
                         <?= $form->field($model, 'ss_descript')->label('Примечание') ; ?>
 
                     <div class="form-group">
-                        <?= Html::submitButton('Submit', ['class' => 'btn btn-primary', 'name' => 'contact-button']) ?>
+                        <?= Html::submitButton('Дoбавить сайт для анализа', ['class' => 'btn btn-primary', 'name' => 'contact-button']) ?>
                     </div>
 
                 <?php ActiveForm::end(); ?>
@@ -52,11 +49,20 @@ $this->params['breadcrumbs'][] = $this->title;
         </div>
 
         <div class="row">
-            <?= if (isset($res)) ?>
-            
-            <?= else: ?>
+            <?php if (isset($data_sss)): ?>
+
+                <?= GridView::widget([
+                    'dataProvider' => $data_sss,
+                    'columns' => [
+                        'ss_id',
+                        'ss_url',
+                        'dc_name',
+                        'ss_description',
+                    ],
+                ]); ?>
+            <?php else: ?>
                 <p>Нет данных для отображения</p>
-            <?= endif; ?>
+            <?php endif; ?>
 
         </div>
 
