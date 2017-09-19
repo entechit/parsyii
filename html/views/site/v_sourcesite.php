@@ -20,46 +20,62 @@ $this->params['breadcrumbs'][] = $this->title;
         </p>
 
         <div class="row">
-            <div class="col-lg-5">
 
-                <?php $form = ActiveForm::begin(['id' => 'contact-form']) ; ?>
 
-                    <?= $form->field($model, 'ss_url')->textInput(['autofocus' => true]) ->label('URL анализируемого сайта ') ; ?>
+            <?php $form = ActiveForm::begin(['id' => 'source-site-form']) ; ?>
 
-                    <?= $form->field($model, 'ss_dc_id')->dropdownList(
-                        $data_dcs,
-                        ['options' =>[ '1' => ['Selected' => true]]]) -> label('CMS на котором построен сайт') ?>
+               <div class="col-lg-6">
+                <?= $form->field($model, 'ss_url')->textInput(['autofocus' => true]) ->label('URL анализируемого сайта ') ; ?>
+            </div>
+         
+            <div class="col-lg-6">
+                <?= $form->field($model, 'ss_dc_id')->dropdownList(
+                     $data_dcs,
+                     ['options' =>[ '1' => ['Selected' => true]]]) -> label('CMS на котором построен сайт') ?>
 
-                        <?= $form->field($model, 'ss_descript')->label('Примечание') ; ?>
+            </div>
 
-                    <div class="form-group">
-                        <?= Html::submitButton('Дoбавить сайт для анализа', ['class' => 'btn btn-primary', 'name' => 'contact-button']) ?>
-                    </div>
+            <div class="col-lg-12">
+                <?= $form->field($model, 'ss_descript')->label('Примечание') ; ?>
+            </div>
+                
 
-                <?php ActiveForm::end(); ?>
+            <div class="form-group">
+                <?= Html::submitButton('Дoбавить сайт для анализа', ['class' => 'btn btn-primary', 'name' => 'contact-button']) ?>
+            </div>
+
+            <?php ActiveForm::end(); ?>
 
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-lg-5">
-                <?= Html::a('Отобразить таблицу существующих сайтов', ['/site/getsourcesitelist'], ['class'=>'btn btn-primary']) ?>
-                <!--?= Html::button('Отобразить таблицу существующих сайтов', ['class' => 'teaser']) ?-->
-            </div>
-        </div>
 
         <div class="row">
+            <!--https://nix-tips.ru/yii2-razbiraemsya-s-gridview.html-->
+
             <?php if (isset($data_sss)): ?>
-
-                <?= GridView::widget([
-                    'dataProvider' => $data_sss,
-                    'columns' => [
-                        'ss_id',
-                        'ss_url',
-                        'dc_name',
-                        'ss_description',
-                    ],
-                ]); ?>
+                <?php \yii\widgets\Pjax::begin(); ?>
+                    <?= GridView::widget([
+                        'dataProvider' => $data_sss,
+                        'columns' => [
+                           //['class' => 'yii\grid\SerialColumn'],
+                            ['attribute'=>'ss_id',
+                                'label'=>'ИД',],
+                            ['attribute'=>'ss_url',
+                                'label'=>'URL Сайта источника',],    
+                            ['attribute'=>'dc_name',
+                                'label'=>'CMS на которой построен сайт',
+                                'filter' => $data_dcs],    
+                            ['attribute'=>'ss_dateadd',
+                                'format' =>  'date',
+                                'label'=>'Дата добавления',],    
+                            ['attribute'=>'ss_description',
+                                'label'=>'Примечание',],    
+                            ['class' => 'yii\grid\ActionColumn'],
+                        ],
+                        'layout'=>"{sorter}\n{pager}\n{summary}\n{items}",
+                    ]); ?>
+                <?php \yii\widgets\Pjax::end(); ?>
             <?php else: ?>
                 <p>Нет данных для отображения</p>
             <?php endif; ?>

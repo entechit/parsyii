@@ -29,9 +29,10 @@ class SourceSiteForm extends Model
     {
         return [
             // name, email, subject and body are required
-            [['ss_url', 'ss_format'], 'required', 'message'=>'Поле URL не может быть пустым.'],
+            [
+                ['ss_url', 'ss_format'], 'required', 'message'=>'Поле URL не может быть пустым.'],
             // email has to be a valid email address
-            ['ss_url', 'url'],
+                ['ss_url', 'url', 'message'=>'Некорректно указан URL'],
 
         ];
     }

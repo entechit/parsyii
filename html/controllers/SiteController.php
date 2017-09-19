@@ -134,13 +134,6 @@ class SiteController extends Controller
     {
         $model = new SourceSiteForm();
         $data_dcs = $model->getdata_dc();
-        return $this->render('v_sourcesite', ['model' => $model, 'data_dcs'=>$data_dcs,]);
-    }
-
-    public function actionGetsourcesitelist()
-    {
-        $model = new SourceSiteForm();
-        $data_dcs = $model->getdata_dc();
         $data_sss = $model->getdata_ss();
         return $this->render('v_sourcesite', ['model' => $model, 'data_sss' => $data_sss, 'data_dcs'=>$data_dcs,]);
     }
