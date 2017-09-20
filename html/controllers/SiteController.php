@@ -132,7 +132,17 @@ class SiteController extends Controller
      */
     public function actionSourcesite()
     {
-        $model = new SourceSiteForm();
+         $model = new SourceSiteForm();
+
+        if ($model->load(Yii::$app->request->post())):
+         // если нажата кнопка добавления URL
+            $url_fields=Yii::$app->request->post('SourceSiteForm');
+            $model->add_sourcesite($url_fields);
+            $this->redirect('/site/sourcesite');  // очистка полей через повторный вход
+            Yii::$app->end();
+        endif;
+
+       
         $data_dcs = $model->getdata_dc();
         $data_sss = $model->getdata_ss();
         return $this->render('v_sourcesite', ['model' => $model, 'data_sss' => $data_sss, 'data_dcs'=>$data_dcs,]);

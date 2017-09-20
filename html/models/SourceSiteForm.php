@@ -45,10 +45,9 @@ class SourceSiteForm extends Model
                 'FROM source_site ss Left join dir_cms dc on ss.ss_dc_id = dc.dc_id ' .
                 'ORDER BY ss.ss_url',
             'pagination' => [
-                'pagesize' => 1,
+                'pagesize' => 10,
             ],
         ]);
-       // $posts = Yii::$app->db->createCommand('SELECT * FROM source_site')->queryAll();
         return $dataProvider;
     }
 
@@ -56,6 +55,15 @@ class SourceSiteForm extends Model
     public function getdata_dc(){
         $posts = Yii::$app->db->createCommand('SELECT * FROM dir_cms order by dc_name')->queryAll();
         return ArrayHelper::map($posts,'dc_id','dc_name'); 
+    }
+    // принимает массив из POST и зжапихивает в базу
+    public function add_sourcesite($val){
+            Yii::$app->db->createCommand()->insert(
+           'source_site',[
+            'ss_url'      => $val['ss_url'],
+            'ss_descript' => $val['ss_descript'],
+            'ss_dc_id' => $val['ss_dc_id']
+              ])->execute();
     }
 
 }

@@ -24,7 +24,7 @@ $this->params['breadcrumbs'][] = $this->title;
 
             <?php $form = ActiveForm::begin(['id' => 'source-site-form']) ; ?>
 
-               <div class="col-lg-6">
+            <div class="col-lg-6">
                 <?= $form->field($model, 'ss_url')->textInput(['autofocus' => true]) ->label('URL анализируемого сайта ') ; ?>
             </div>
          
@@ -32,7 +32,6 @@ $this->params['breadcrumbs'][] = $this->title;
                 <?= $form->field($model, 'ss_dc_id')->dropdownList(
                      $data_dcs,
                      ['options' =>[ '1' => ['Selected' => true]]]) -> label('CMS на котором построен сайт') ?>
-
             </div>
 
             <div class="col-lg-12">
@@ -40,13 +39,12 @@ $this->params['breadcrumbs'][] = $this->title;
             </div>
                 
 
-            <div class="form-group">
+            <div class="form-group col-lg-6">
                 <?= Html::submitButton('Дoбавить сайт для анализа', ['class' => 'btn btn-primary', 'name' => 'contact-button']) ?>
             </div>
 
             <?php ActiveForm::end(); ?>
 
-            </div>
         </div>
 
 
@@ -69,7 +67,7 @@ $this->params['breadcrumbs'][] = $this->title;
                             ['attribute'=>'ss_dateadd',
                                 'format' =>  'date',
                                 'label'=>'Дата добавления',],    
-                            ['attribute'=>'ss_description',
+                            ['attribute'=>'ss_descript',
                                 'label'=>'Примечание',],    
                             ['class' => 'yii\grid\ActionColumn'],
                         ],
