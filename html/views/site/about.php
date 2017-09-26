@@ -33,30 +33,44 @@ $this->params['breadcrumbs'][] = $this->title;
     source_site - сайты для граббинга указаннеы заказчиком
       - ss_id int()
       - ss_url varchar(250)
+      - ss_dc_id - название CMS
       - ss_dataadd - DataTimeStamp
-      - ss_format - название CMS
+      - ss_descript 
 
-    ss_url_tree - результат работы робота, найденные внутренние ссылки 
-      - ut_id int()
-      - ut_ss_id int()
-      - ut_url varchar(2000)
-      - ut_dn_page_type int()
-      - ut_ready datatimestamp
 
-      data_field
-      - df_id int()
-      - df_name varchar(250)
-      - df_descript (250)
-      - df_rd_fieldname ("rd_short_data" / "rd_long_data")
+      dir_cms - справочник CMS на которых разработан сайт
+        - dc_id
+        - dc_name
 
-      driver_name
-      - dn_id int()
-      - dn_cms_name varchar(255)
-      - dn_page_type varchar(255)
 
-      result_data
-      - rd_ut_id  int()
-      - rd_df_id int()
+    source_page - найденные ссылки, страницы на которых анализировались
+      - sp_id
+      - sp_url
+      - sp_ss_id  - исходный сайт / задания для парсинга
+      - sp_dp_id  - тип структуры
+      - sp_parsed - признак проанализированной страницы
+      - sp_datetimeadd - время анализа страницы
+
+
+
+    dir_page_cms - тип структуры страниц
+      - dp_id
+      - dp_dc_id
+      - dp_name
+      - dp_descript (250)
+
+
+    dir_tags - список полей, которые могут анализироваться системой
+      - dt_id
+      - dt_name
+      - dt_rd_field (rd_short_data / rd_long_data)
+
+  
+      result_data - результат парсинга
+      - rd_id
+      - rd_ss_id int()
+      - rd_sp_id int()
+      - rd_dt_id int()
       - rd_short_data varchar(1000)
       - rd_long_data text
 
