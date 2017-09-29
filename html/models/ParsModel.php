@@ -21,6 +21,12 @@ class ParsModel extends Model
     public $dp_id;          // id шаблона страницы, которым как мы считаем нужно парсить
     
 
+    public $cb_find_internal_url; //искать внутренние ссылки на страницах
+    public $rb_url_source; // где искать ссылки rb_seek_url_onsite / rb_seek_url_sitemap
+    public $cb_type_source_page; // нужно ли типизировать страницы
+    public $cb_pars_source_page; // выполнить парсинг
+
+
 
     public $ss_descript;  //
     public $db;
@@ -33,7 +39,14 @@ class ParsModel extends Model
 
     // основная управляющая функция
     // на входе анализирует ss_id - код сайта который парсим
-    function main_pars_f(){
+    function main_pars_f($ss_params){
+        $this->ss_id = $ss_params["ss_id"];
+        $this->cb_find_internal_url = $ss_params["cb_find_internal_url"];
+        $this->rb_url_source =  $ss_params["rb_url_source"];
+        $this->cb_type_source_page =  $ss_params["cb_type_source_page"];
+        $this->cb_pars_source_page =  $ss_params["cb_pars_source_page"];
+
+        
 
     }
 

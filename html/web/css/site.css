@@ -113,3 +113,9 @@ a.desc:after {
 .nav > li > form > button.logout:focus {
     outline: none;
 }
+
+
+/* sava*/
+.ss_grid_hover:hover{
+    background-color: grey !important;
+}

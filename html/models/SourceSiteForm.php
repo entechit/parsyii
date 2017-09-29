@@ -12,10 +12,19 @@ use yii\data\SqlDataProvider;
  */
 class SourceSiteForm extends Model
 {
+    public $ss_id;
     public $ss_url;
-    public $ss_dc_id;
     public $ss_descript;
+    public $ss_dc_id;
+
     public $db;
+
+
+    public $cb_find_internal_url;
+    public $cb_type_source_page;
+    public $cb_pars_source_page;
+    public $rb_url_source;
+
 
     // Формируем переменную коннекта к базе данных
     function __construct(){
@@ -56,6 +65,8 @@ class SourceSiteForm extends Model
         $posts = Yii::$app->db->createCommand('SELECT * FROM dir_cms order by dc_name')->queryAll();
         return ArrayHelper::map($posts,'dc_id','dc_name'); 
     }
+
+    
     // принимает массив из POST и зжапихивает в базу
     public function add_sourcesite($val){
             Yii::$app->db->createCommand()->insert(

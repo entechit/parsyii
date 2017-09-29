@@ -17,7 +17,7 @@ $this->params['breadcrumbs'][] = $this->title;
         <div class="row">
         
             <div class="col-lg-6">
-            <p>Шаг № 1. Для анализа сайта введите его полный Url в поле.</p>
+            <h3>Шаг № 1. Для анализа сайта введите его полный Url в поле.</h3>
 
                 <?php $form = ActiveForm::begin(['id' => 'source-site-form']) ; ?>
 
@@ -33,16 +33,53 @@ $this->params['breadcrumbs'][] = $this->title;
                     <?= $form->field($model, 'ss_descript')->label('Примечание') ; ?>
                
 
-                    <?= Html::submitButton('Дoбавить сайт для анализа', ['class' => 'btn btn-primary', 'name' => 'contact-button']) ?>
+                    <?= Html::submitButton('Дoбавить сайт для анализа', ['class' => 'btn btn-primary', 'name' => 'source-site-add-button']) ?>
 
                 <?php ActiveForm::end(); ?>
 
             </div>
             <div class="col-lg-6">
-                
+              <h3>Шаг № 2. Действие! Выберите, что будем делать.</h3>
+                <br>
+                <h4 id = "c_selected_url"></h4>
+                <?php $form2 = ActiveForm::begin([
+                        'id' => 'source-site-form-action', 
+                        'action'=>'/pars/pars1'
+                        ]); ?>
+
+                 <?= $form->field($model, 'ss_id')->hiddenInput(['id'=> "ss_id"])->label(''); ?>
+
+            
+                  <?=  $form2->field($model, 'cb_find_internal_url')->checkbox(['label' => 'найти все внутренние ссылки на сайте', 'labelOptions' => [
+                        'style' => 'padding-left:20px;' ],
+                        'disabled' => false
+                    ]); ?>
+
+
+                    <?php $model->rb_url_source = 'rb_seek_url_onsite'; ?>
+                    <?= $form2->field($model, 'rb_url_source')->radioList([
+                        'rb_seek_url_onsite' => 'Искать ссылки на сайте',
+                        'rb_seek_url_sitemap' => 'Загрузить sitemap.xml',
+                    ])->label('Источник для поиска внутренних ссылок'); ?>
+               
+
+                    <?= $form2->field($model, 'cb_type_source_page')->checkbox(['label' => 'типизировать найденные страницы', 'labelOptions' => [
+                        'style' => 'padding-left:20px;' ],
+                        'disabled' => false
+                    ]); ?>
+
+
+                    <?= $form2->field($model, 'cb_pars_source_page')->checkbox(['label' => 'распарсить найденные страницы', 'labelOptions' => [
+                        'style' => 'padding-left:20px;' ],
+                        'disabled' => false
+                    ]); ?>
+
+                    <?= Html::submitButton('Выполнить анализ', ['class' => 'btn btn-primary', 'name' => 'source-site-action-button']); ?>
+
+                    <?php ActiveForm::end(); ?>
+
             </div>
         </div>
-
 
 
 
@@ -70,6 +107,14 @@ $this->params['breadcrumbs'][] = $this->title;
                             ['class' => 'yii\grid\ActionColumn'],
                         ],
                         'layout'=>"{sorter}\n{pager}\n{summary}\n{items}",
+                        'rowOptions' => function ($model, $key, $index, $grid) {
+                            return ['data'=>[
+                                    'id' => $model['ss_id'],
+                                    'ss_url' => $model['ss_url'],
+                                    'ss_descript' => $model['ss_descript']],
+                                    'onclick' => 'select_ss_id(this)',  
+                                    'class' => 'ss_grid_hover'
+                                ];},
                     ]); ?>
                 <?php \yii\widgets\Pjax::end(); ?>
             <?php else: ?>
@@ -80,3 +125,17 @@ $this->params['breadcrumbs'][] = $this->title;
 
 
 </div>
+<script type="text/javascript">
+    function select_ss_id(that){
+         $.ajax({  
+         cache: false,
+         type:"POST",
+         data: null, 
+         dataType: "text",
+          success: function(){  
+            $("#c_selected_url").html('URL: '+ $(that).data('ss_url') + '('+$(that).data('ss_descript')+')')
+            $("#ss_id").val($(that).data('id'))
+            },   
+      });  
+    }
+</script>
