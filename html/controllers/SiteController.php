@@ -126,7 +126,7 @@ class SiteController extends Controller
         return $this->render('about');
     }
 
-        /** SAVA
+    /** SAVA
      * отображение страницы ввода/добавления исходного сайта
      *
      * @return string

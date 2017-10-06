@@ -31,7 +31,6 @@ $this->params['breadcrumbs'][] = $this->title;
 
 
                     <?= $form->field($model, 'ss_descript')->label('Примечание') ; ?>
-               
 
                     <?= Html::submitButton('Дoбавить сайт для анализа', ['class' => 'btn btn-primary', 'name' => 'source-site-add-button']) ?>
 
@@ -44,30 +43,28 @@ $this->params['breadcrumbs'][] = $this->title;
                 <h4 id = "c_selected_url"></h4>
                 <?php $form2 = ActiveForm::begin([
                         'id' => 'source-site-form-action', 
-                        'action'=>'/pars/pars1'
+                        'action'=>'/pars/pars'   // вызываем экшн контроллера
                         ]); ?>
 
                  <?= $form->field($model, 'ss_id')->hiddenInput(['id'=> "ss_id"])->label(''); ?>
+                 <?= $form->field($model, 'ss_url')->hiddenInput(['id'=> "ss_url"])->label(''); ?>
 
             
-                  <?=  $form2->field($model, 'cb_find_internal_url')->checkbox(['label' => 'найти все внутренние ссылки на сайте', 'labelOptions' => [
+                 <?=  $form2->field($model, 'cb_find_internal_url')->checkbox(['label' => 'найти все внутренние ссылки на сайте', 'labelOptions' => [
                         'style' => 'padding-left:20px;' ],
                         'disabled' => false
                     ]); ?>
-
 
                     <?php $model->rb_url_source = 'rb_seek_url_onsite'; ?>
                     <?= $form2->field($model, 'rb_url_source')->radioList([
                         'rb_seek_url_onsite' => 'Искать ссылки на сайте',
                         'rb_seek_url_sitemap' => 'Загрузить sitemap.xml',
                     ])->label('Источник для поиска внутренних ссылок'); ?>
-               
 
                     <?= $form2->field($model, 'cb_type_source_page')->checkbox(['label' => 'типизировать найденные страницы', 'labelOptions' => [
                         'style' => 'padding-left:20px;' ],
                         'disabled' => false
                     ]); ?>
-
 
                     <?= $form2->field($model, 'cb_pars_source_page')->checkbox(['label' => 'распарсить найденные страницы', 'labelOptions' => [
                         'style' => 'padding-left:20px;' ],
@@ -134,6 +131,8 @@ $this->params['breadcrumbs'][] = $this->title;
          dataType: "text",
           success: function(){  
             $("#c_selected_url").html('URL: '+ $(that).data('ss_url') + '('+$(that).data('ss_descript')+')')
+            $("#ss_url").val($(that).data('ss_url') + '('+$(that).data('ss_descript')+')')
+
             $("#ss_id").val($(that).data('id'))
             },   
       });  

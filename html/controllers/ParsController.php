@@ -21,19 +21,22 @@ class ParsController extends Controller
    // }
 
  
-    public function actionPars1()
+    public function actionPars()
     {
         $this->model = new ParsModel();
         if (Yii::$app->request->post('source-site-action-button')!==null): // нажата кнопка запустить анализ 
                 
-                $url_fields=Yii::$app->request->post('SourceSiteForm');
-                $this->model->main_pars_f($url_fields);
+            $url_fields=Yii::$app->request->post('SourceSiteForm');
+            $this->model->main_pars_f($url_fields);
+            if (!empty($url_fields['ss_id'])){
+                $session = Yii::$app->session;
+                $session->set('ss_id', $url_fields['ss_id']);
+            }
+
+
         endif;
 
         return $this->render('v_parsprogress', ['model' => $this->model,]);
-      //  return $this->render('v_parsprogress');
 
     }
-
-
 }
