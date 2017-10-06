@@ -23,6 +23,7 @@ class ParsController extends Controller
  
     public function actionPars()
     {
+
         $this->model = new ParsModel();
         if (Yii::$app->request->post('source-site-action-button')!==null): // нажата кнопка запустить анализ 
                 
@@ -31,12 +32,11 @@ class ParsController extends Controller
             if (!empty($url_fields['ss_id'])){
                 $session = Yii::$app->session;
                 $session->set('ss_id', $url_fields['ss_id']);
-            }
-
+            };
 
         endif;
 
-        return $this->render('v_parsprogress', ['model' => $this->model,]);
+        return $this->render('v_parsprogress', ['model' => $this->model, 'parslog'=>$this->model->parslog,]);
 
     }
 }

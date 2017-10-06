@@ -50,9 +50,9 @@ $this->params['breadcrumbs'][] = $this->title;
                  <?= $form->field($model, 'ss_url')->hiddenInput(['id'=> "ss_url"])->label(''); ?>
 
             
-                 <?=  $form2->field($model, 'cb_find_internal_url')->checkbox(['label' => 'найти все внутренние ссылки на сайте', 'labelOptions' => [
+                 <?=  $form2->field($model, 'cb_find_internal_url')->checkbox(['value'=>0, 'label' => 'найти все внутренние ссылки на сайте', 'labelOptions' => [
                         'style' => 'padding-left:20px;' ],
-                        'disabled' => false
+                        'disabled' => false,
                     ]); ?>
 
                     <?php $model->rb_url_source = 'rb_seek_url_onsite'; ?>
@@ -61,14 +61,14 @@ $this->params['breadcrumbs'][] = $this->title;
                         'rb_seek_url_sitemap' => 'Загрузить sitemap.xml',
                     ])->label('Источник для поиска внутренних ссылок'); ?>
 
-                    <?= $form2->field($model, 'cb_type_source_page')->checkbox(['label' => 'типизировать найденные страницы', 'labelOptions' => [
+                    <?= $form2->field($model, 'cb_type_source_page')->checkbox(['value'=>0, 'label' => 'типизировать найденные страницы', 'labelOptions' => [
                         'style' => 'padding-left:20px;' ],
-                        'disabled' => false
+                        'disabled' => false,
                     ]); ?>
 
-                    <?= $form2->field($model, 'cb_pars_source_page')->checkbox(['label' => 'распарсить найденные страницы', 'labelOptions' => [
+                    <?= $form2->field($model, 'cb_pars_source_page')->checkbox([ 'value'=>0,'label' => 'распарсить найденные страницы', 'labelOptions' => [
                         'style' => 'padding-left:20px;' ],
-                        'disabled' => false
+                        'disabled' => false,
                     ]); ?>
 
                     <?= Html::submitButton('Выполнить анализ', ['class' => 'btn btn-primary', 'name' => 'source-site-action-button']); ?>

@@ -12,7 +12,8 @@ use yii\data\SqlDataProvider;
 
 class ParsModel extends Model
 {
-    
+    public $parslog; // текстовое представление результатов парсинга
+
     public $db;
     public $ss_id;        // id задания из таблицы SourceSite
 
@@ -50,6 +51,7 @@ class ParsModel extends Model
     function __construct(){
         $db = Yii::$app->db;
         $this->curr_sp_id = -1;
+        $this->parslog = '';
     }
 
 
@@ -65,17 +67,31 @@ class ParsModel extends Model
         $this->cb_type_source_page = $ss_params["cb_type_source_page"]; // необходимо типизировать страницы
         $this->cb_pars_source_page = $ss_params["cb_pars_source_page"]; // необходимо выдрать все известные теги
     
+ // var_dump( $ss_params);
+ //         die;
+
+          $this->addlog("cb_pars_source_page=".$this->cb_pars_source_page);
+          $this->addlog("cb_type_source_page=".$this->cb_type_source_page);
+          $this->addlog("cb_find_internal_url=".$this->cb_find_internal_url);
+          $this->addlog("rb_url_source=".$this->rb_url_source);
+
         // если нужно чета делать кроме как загрузить уже найденные ссылки
-        if ($this->cb_pars_source_page == 1 or 
-            $this->cb_type_source_page == 1 or (
-            $this->cb_find_internal_url = 1 and $this->rb_url_source == 'rb_seek_url_onsite'))
+        if (($this->cb_pars_source_page == '1') or 
+            ($this->cb_type_source_page == '1') or 
+              (($this->cb_find_internal_url = '1') and ($this->rb_url_source == 'rb_seek_url_onsite'))
+            )
         {
 
+          $this->addlog("Нам есть что считать");
+
+            $this->fetch_source_page(); // сдвигаем указатель на страницу
             while  ($this->curr_sp_id!=0){
-                $this->fetch_source_page; // сдвигаем указатель на страницу
+
+                set_time_limit(60); // ставим 60 сек на обработку каждой страницы
+
                 $this->get_page(); // вытягиваем страницу для анализа
 
-                if ($this->cb_type_source_page == 1 and empty($this->sp_dp_id)) // если страницу нужно типизировать
+                if ($this->cb_type_source_page == '1' and empty($this->sp_dp_id)) // если страницу нужно типизировать
                 { 
                     $this->choose_pattern(); // пока не работает
                 }
@@ -84,12 +100,15 @@ class ParsModel extends Model
                     $this->seek_urls();  // пока не работает
                 }
 
-                if ($this->cb_pars_source_page == 1) // если таки нужно выдрать данные
+                if ($this->cb_pars_source_page == '1') // если таки нужно выдрать данные
                 {
                     $this->get_content();
                 }
+
+                $this->fetch_source_page(); // сдвигаем указатель на страницу
             }
         }
+        $this->addlog("Анализ закончен");
     }
 
 
@@ -97,11 +116,12 @@ class ParsModel extends Model
     // № 1. загружает по ссылке страницу в переменную $current_page_body и созданный DOM объект в current_page_DOM
     function get_page()
     {
-        $this->file_get_contents_proxy($this->sp_url);
-        //$this->file_get_contents($this->sp_url);
-        $current_page_DOM = new DomDocument();
+        //$this->file_get_contents_proxy($this->sp_url); // включаем если через прокси
+      $this->current_page_body = file_get_contents($this->sp_url); // включаем если БЕЗ прокси
+
+        $current_page_DOM = new \DOMDocument();
         @$current_page_DOM->loadHTML($current_page_body); 
-        $current_page_xpath = new DomXPath($current_page_DOM);
+        $current_page_xpath = new \DomXPath($current_page_DOM);
     }
 
 
@@ -117,11 +137,12 @@ class ParsModel extends Model
             ->limit(1)
             ->orderBy(['sp_id' => SORT_ASC])
             ->one();
-
-        if (!empty($row[sp_id])){  // если есть следующая страница для разбора
-            $this->curr_sp_id = $row[sp_id];  // ставим указатель на текущую страницу
-            $this->sp_url = $row[sp_url];  // текущий URL
-            $this->sp_dp_id = $row[sp_dp_id];
+        
+        if (!empty($row['sp_id'])){  // если есть следующая страница для разбора
+            $this->curr_sp_id = $row['sp_id'];  // ставим указатель на текущую страницу
+            $this->sp_url = $row['sp_url'];  // текущий URL
+            $this->sp_dp_id = $row['sp_dp_id'];
+            $this->addlog("Анализируем: ".$this->sp_url);
 
         } else {  // разбор окончен, больше страниц нет
             $this->curr_sp_id = 0;
@@ -130,7 +151,7 @@ class ParsModel extends Model
 
 
 
-    // в переменной $current_page_body находит ссылки и запихивает уникальные в таблицу найденных ссылок
+    // в переменной $current_page_body находит уникальные ссылки и запихивает  в таблицу найденных ссылок
     function seek_urls(){
 
     }
@@ -155,7 +176,7 @@ class ParsModel extends Model
     }
 
     // вытягивает страницу в переменную current_page_body
-    function file_get_contents_proxy($proxy_url)
+    function file_get_contents_proxy($url)
     {
         
         $auth = base64_encode('sava:123'); 
@@ -179,5 +200,10 @@ class ParsModel extends Model
         $this->current_page_body = file_get_contents($url,false,$ctx); 
     }
 
+    // формирует запись итогов работы парсера
+    function addlog($txt)
+    {
+        $this->parslog .= $txt.'<br>';
+    }
 
 }
