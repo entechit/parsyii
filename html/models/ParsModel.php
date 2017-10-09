@@ -58,7 +58,7 @@ class ParsModel extends Model
         $this->curr_sp_id = -1;
         $this->parslog = '';
         $this->ri_img_path = '../parsdata/';
-        $this->is_proxy = true;
+        $this->is_proxy = false;
     }
 
 
@@ -93,7 +93,8 @@ class ParsModel extends Model
             $this->fetch_source_page(); // сдвигаем указатель на страницу
             while  ($this->curr_sp_id!=0){
 
-                set_time_limit(60); // ставим 60 сек на обработку каждой страницы
+            $this->addlog("Итеррация: ". $this->sp_url);
+            
 
                 $this->get_page(); // вытягиваем страницу для анализа
 
@@ -132,7 +133,7 @@ class ParsModel extends Model
         $this->current_page_body = $this->file_get_contents_proxy($this->sp_url); 
         $current_page_DOM = new \DOMDocument();
         @$current_page_DOM->loadHTML($current_page_body); 
-        $current_page_xpath = new \DomXPath($current_page_DOM);
+        $this->current_page_xpath = new \DomXPath($current_page_DOM);
     }
 
 
@@ -153,7 +154,7 @@ class ParsModel extends Model
             $this->curr_sp_id = $row['sp_id'];  // ставим указатель на текущую страницу
             $this->sp_url = $row['sp_url'];  // текущий URL
             $this->sp_dp_id = $row['sp_dp_id'];
-            $this->addlog("Анализируем: ".$this->sp_url);
+            $this->addlog("fetch_source_page(): ".$this->sp_url);
 
         } else {  // разбор окончен, больше страниц нет
             $this->curr_sp_id = 0;
@@ -168,28 +169,30 @@ class ParsModel extends Model
     }
 
     /* Типизирует страницу 
-    подбирает наиболее подходящую схему для парсинга. Запихивает результат в source_page.sp_dp_id   И переменную $dp_id
+    подбирает наиболее подходящую схему для парсинга. Запихивает результат в source_page.sp_dp_id И переменную $dp_id
     */
     function choose_pattern()
     {
         $expression = sprintf('count(%s) > 0', $expression);
-        return $xpath->evaluate($expression);
+        return $this->current_page_xpath->evaluate($expression);
     }
 
     // основная функция парсинга, которая пытается вытянуть данные по всем известным ей шаблонам
     // и занести результаты в таблицу result_data
     function get_content(){
-        $nodes = $xpath->query(".//*[contains(@class, 'img')]/img");
+        $nodes = $this->current_page_xpath->query(".//*[contains(@class, 'img')]/img");
         foreach ($nodes as $i => $node) {
-                $src = $node->nodeValue;
+          //      $src = $node->nodeValue;
         } 
-        return $src;
+       // return $src;
     }
 
     //*************************************************************
     // вытягивает страницу в переменную current_page_body
     function file_get_contents_proxy($url)
     {
+        set_time_limit(60); // ставим 60 сек на обработку каждой страницы
+
         $auth = base64_encode('sava:123'); 
         if ($this->is_proxy)
         {
@@ -219,6 +222,8 @@ class ParsModel extends Model
                 ), 
             );
         }
+
+        $this->addlog("Download Content file_get_contents_proxy(): ".$url);
         $ctx = stream_context_create($opts); 
             // возвращаем содержимое страницы с прокси параметрами или нет
         return file_get_contents($url,false,$ctx); 
@@ -278,6 +283,7 @@ class ParsModel extends Model
     function addlog($txt)
     {
         $this->parslog .= $txt.'<br>';
+       // error_log($this->parslog);
     }
 
 }
