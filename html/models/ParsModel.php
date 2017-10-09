@@ -5,6 +5,7 @@ namespace app\models;
 use Yii;
 use yii\base\Model;
 use yii\data\SqlDataProvider;
+//use yii\db\ActiveRecord;
 
 /*
   Базовый класс для парсинга сайтов. Что он умеет:
@@ -12,6 +13,8 @@ use yii\data\SqlDataProvider;
 
 class ParsModel extends Model
 {
+    public $is_proxy;
+
     public $parslog; // текстовое представление результатов парсинга
 
     public $db;
@@ -26,6 +29,8 @@ class ParsModel extends Model
     public $sp_url; // адрес текущей страницы
 
     public $sp_dp_id; // тип текущей страницы
+
+    PUblic $ri_img_path; // путь по которому сохранены картинки
 
 
     /* следующие переменные под вопросом */
@@ -52,6 +57,8 @@ class ParsModel extends Model
         $db = Yii::$app->db;
         $this->curr_sp_id = -1;
         $this->parslog = '';
+        $this->ri_img_path = '../parsdata/';
+        $this->is_proxy = true;
     }
 
 
@@ -67,8 +74,6 @@ class ParsModel extends Model
         $this->cb_type_source_page = $ss_params["cb_type_source_page"]; // необходимо типизировать страницы
         $this->cb_pars_source_page = $ss_params["cb_pars_source_page"]; // необходимо выдрать все известные теги
     
- // var_dump( $ss_params);
- //         die;
 
           $this->addlog("cb_pars_source_page=".$this->cb_pars_source_page);
           $this->addlog("cb_type_source_page=".$this->cb_type_source_page);
@@ -76,11 +81,12 @@ class ParsModel extends Model
           $this->addlog("rb_url_source=".$this->rb_url_source);
 
         // если нужно чета делать кроме как загрузить уже найденные ссылки
-        if (($this->cb_pars_source_page == '1') or 
-            ($this->cb_type_source_page == '1') or 
-              (($this->cb_find_internal_url = '1') and ($this->rb_url_source == 'rb_seek_url_onsite'))
+        if (($this->cb_pars_source_page == 1) or 
+            ($this->cb_type_source_page == 1) or 
+              (($this->cb_find_internal_url == 1) and ($this->rb_url_source == 'rb_seek_url_onsite'))
             )
         {
+
 
           $this->addlog("Нам есть что считать");
 
@@ -107,6 +113,13 @@ class ParsModel extends Model
 
                 $this->fetch_source_page(); // сдвигаем указатель на страницу
             }
+
+            if ($this->cb_pars_source_page == '1') // если таки нужно выдрать данные - картиники
+            {
+                $this->ri_img_path .= $this->ss_id;
+                $this->get_img(); // скачиваем картинки РАБОТАЕТ!
+            };
+
         }
         $this->addlog("Анализ закончен");
     }
@@ -116,9 +129,7 @@ class ParsModel extends Model
     // № 1. загружает по ссылке страницу в переменную $current_page_body и созданный DOM объект в current_page_DOM
     function get_page()
     {
-        //$this->file_get_contents_proxy($this->sp_url); // включаем если через прокси
-      $this->current_page_body = file_get_contents($this->sp_url); // включаем если БЕЗ прокси
-
+        $this->current_page_body = $this->file_get_contents_proxy($this->sp_url); 
         $current_page_DOM = new \DOMDocument();
         @$current_page_DOM->loadHTML($current_page_body); 
         $current_page_xpath = new \DomXPath($current_page_DOM);
@@ -175,31 +186,94 @@ class ParsModel extends Model
         return $src;
     }
 
+    //*************************************************************
     // вытягивает страницу в переменную current_page_body
     function file_get_contents_proxy($url)
     {
-        
         $auth = base64_encode('sava:123'); 
-
-        $opts = array( 
-            'http' => array ( 
-                'method'=>'GET', 
-                'proxy'=>'entecheco.com:3128', 
-                'request_fulluri' => true, 
-                'header'=> array("Proxy-Authorization: Basic $auth", "Authorization: Basic $auth") 
-
-            ), 
-            'https' => array ( 
-                'method'=>'GET', 
-                'proxy'=>'entecheco.com:3128', 
-                'request_fulluri' => true, 
-                'header'=> array("Proxy-Authorization: Basic $auth", "Authorization: Basic $auth") 
-            ) 
-        ); 
+        if ($this->is_proxy)
+        {
+            $opts = array( 
+                'http' => array ( 
+                    'method'=>'GET', 
+                    'proxy'=>'entecheco.com:3128', 
+                    'request_fulluri' => true, 
+                    'header'=> array("Proxy-Authorization: Basic $auth", "Authorization: Basic $auth") 
+                ), 
+                'https' => array ( 
+                    'method'=>'GET', 
+                    'proxy'=>'entecheco.com:3128', 
+                    'request_fulluri' => true, 
+                    'header'=> array("Proxy-Authorization: Basic $auth", "Authorization: Basic $auth") 
+                ),
+                 "ssl"=>array(
+                    "verify_peer"=>false,
+                "verify_peer_name"=>false,
+                ), 
+            ); 
+        } else {
+            $opts = array( 
+                 "ssl"=>array(
+                    "verify_peer"=>false,
+                "verify_peer_name"=>false,
+                ), 
+            );
+        }
         $ctx = stream_context_create($opts); 
-        $this->current_page_body = file_get_contents($url,false,$ctx); 
+            // возвращаем содержимое страницы с прокси параметрами или нет
+        return file_get_contents($url,false,$ctx); 
     }
 
+
+    //***********************  РАБОТАЕТ **************************************
+    /* на вход принимает ss_id - задание. 
+        переменная - base_path: то, где создаем папку с архивом картинк
+        в архиве делаем папку с SS_ID - идентификатор задания
+    К этому моменту в таблицу result_img уже сложены ссылки:
+        1. Идем по циклу по всем картинкам
+        2. Картинку скачиваем и сохраняем в папке base_path/ss_id
+        3. Именуем картинку result_img.ri_id.jpg 
+    */
+    function get_img(){
+        $counter_img = 0;
+        $this->addlog("Вынимаем картинки");
+
+        if( !is_dir( $this->ri_img_path)){ 
+            $this->addlog("Создан новый каталог: ".$this->ri_img_path);
+            mkdir( $this->ri_img_path, 0777, true );
+        };
+
+        $row = (new \yii\db\Query())
+            ->select(['ri_id', 'ri_source_url', 'ri_ss_id'])
+            ->from('result_img')
+            ->where('ri_img_name is null and ri_ss_id = :ri_ss_id')
+            ->addParams(['ri_ss_id'=>$this->ss_id]);
+        
+
+           
+
+        // цикл по одной записи. Выполняет запрос при первой итеррации
+        foreach ($row->each() as $img_row) {
+
+            $file_name =$img_row['ri_id'].'.jpg';
+            // сохраняем на диск
+            $res = file_put_contents($this->ri_img_path.'/'.$file_name, $this->file_get_contents_proxy($img_row['ri_source_url']));
+
+            // сохраняем результат в базу
+            Yii::$app->db->createCommand()
+                         ->update('result_img', 
+                                ['ri_img_name' => $file_name,
+                                'ri_img_path' => $this->ri_img_path, ], 
+                                'ri_id = '.$img_row['ri_id']) 
+                         ->execute();
+            ++ $counter_img;
+        }
+        $this->addlog("Обработано (скачано) картинок: ".$counter_img);
+    }
+
+
+
+    //*************************************************
     // формирует запись итогов работы парсера
     function addlog($txt)
     {

@@ -2506,3 +2506,12 @@
 172.16.14.15 - - [06/Oct/2017:09:56:52 +0300] "GET /sourcepage/getlistpages?page=55&_pjax=%23p0&_pjax=%23p0 HTTP/1.1" 200 13671
 172.16.14.15 - - [06/Oct/2017:09:57:20 +0300] "GET /sourcepage/view?id=9 HTTP/1.1" 404 2261
 172.16.14.15 - - [06/Oct/2017:09:57:22 +0300] "GET /sourcepage/getlistpages?page=55 HTTP/1.1" 200 16399
+172.16.14.15 - - [09/Oct/2017:10:45:14 +0300] "GET /assets/de6f8873/yii.js HTTP/1.1" 200 19956
+172.16.14.15 - - [09/Oct/2017:10:45:14 +0300] "GET /css/site.css HTTP/1.1" 200 1916
+172.16.14.15 - - [09/Oct/2017:10:45:14 +0300] "GET /assets/de6f8873/yii.gridView.js HTTP/1.1" 200 9310
+172.16.14.15 - - [09/Oct/2017:10:45:14 +0300] "GET /assets/dcc28f85/jquery.pjax.js HTTP/1.1" 200 28596
+172.16.14.15 - - [09/Oct/2017:10:45:14 +0300] "GET /assets/434f672a/jquery.js HTTP/1.1" 200 257551
+172.16.14.15 - - [09/Oct/2017:10:45:14 +0300] "GET /assets/dc00207c/css/bootstrap.css HTTP/1.1" 200 146010
+172.16.14.15 - - [09/Oct/2017:10:45:14 +0300] "GET /assets/dc00207c/js/bootstrap.js HTTP/1.1" 200 69707
+172.16.14.15 - - [09/Oct/2017:10:45:12 +0300] "GET /sourcepage/getlistpages?page=55 HTTP/1.1" 200 9171
+172.16.14.15 - - [09/Oct/2017:10:45:32 +0300] "GET /assets/dc00207c/fonts/glyphicons-halflings-regular.woff2 HTTP/1.1" 200 18028

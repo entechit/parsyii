@@ -1,6 +1,7 @@
 <?php
     class TestParser {
         protected $page;
+        protected $img_tpath; 
 
         public function getPage($url) {
             $html = '';
@@ -9,7 +10,13 @@
         }
 
         public function saveImg() {
-            
+            //$id = ;
+            $catalog = substr(md5($id), 0, 1).'/';
+            $uploaddir = '..'.$this->img_tpath.'/'.$catalog;  
+            if( ! is_dir( $uploaddir ) ) mkdir( $uploaddir, 0777 );
+            $file_name = $id.'.jpg';
+            // сохраняем на диск
+            $res = file_put_contents($uploaddir.$file_name, file_get_contents_proxy($url));   
         }
 
         public function find() {
@@ -17,15 +24,16 @@
             @$dom->loadHTML($html); 
             $xpath = new DomXPath($dom);
 
-            //$nodes = $xpath->query($expression);  
-            //foreach ($nodes as $i => $node) {
-            //}  
-
-            $nodes = $xpath->query(".//*[contains(@class, 'img')]/img");
+            $nodes = $xpath->query(".//*[contains(@class, 'lead')]");  
             foreach ($nodes as $i => $node) {
-                $src = $node->nodeValue;
+                $text = $node->nodeValue;
+            }  
+
+            $nodes = $xpath->query(".//*[contains(@class, 'img-ttl')]/img");
+            foreach ($nodes as $i => $node) {
+                $img_scr = $node->getAttribute('src');
             } 
-            return $src;
+            return $text;
         }   
 
         public function has($html, $expression) {
