@@ -24,7 +24,7 @@ class ParsModel extends Model
 
     public $current_page_xpath; // структура узлов???
 
-    public $curr_sp_id;  // указатель на текущую анализируемую страницу в source_page. Если она = 0 разбор закончен
+    public $sp_id;  // указатель на текущую анализируемую страницу в source_page. Если она = 0 разбор закончен
 
     public $sp_url; // адрес текущей страницы
 
@@ -32,14 +32,15 @@ class ParsModel extends Model
 
     PUblic $ri_img_path; // путь по которому сохранены картинки
 
+    public $dc_id;             // код CMS 
 
     /* следующие переменные под вопросом */
-    public $current_page_DOM; // здесь сидит DOM объект???
+  //  public $current_page_DOM; // здесь сидит DOM объект???
 
     public $ss_url;
 
 
-    public $dc_id;             // код CMS 
+
 
     public $dp_id;          // id шаблона страницы, которым как мы считаем нужно парсить
     
@@ -56,10 +57,11 @@ class ParsModel extends Model
     // Формируем переменную коннекта к базе данных
     function __construct(){
        // $db = Yii::$app->db;
-        $this->curr_sp_id = -1;
+        $this->sp_id = -1;
         $this->parslog = '';
         $this->ri_img_path = '../parsdata/';
-        $this->is_proxy = true;
+        $this->is_proxy = false;
+
     }
 
 
@@ -67,7 +69,13 @@ class ParsModel extends Model
     // на входе анализирует ss_id - код сайта который парсим
     function main_pars_f($ss_params){
         $this->ss_id = $ss_params["ss_id"];
-        $this->ss_url = $ss_params["ss_url"];  // имя базового url (с примечанием)
+
+        $row_ss = (new \yii\db\Query())->from('source_site')->where(['ss_id' => $this->ss_id])->one();
+       
+        $this->ss_url = $row_ss['ss_url'];  
+        $this->dc_id = $row_ss['ss_dc_id'];  
+
+        //$this->ss_url = $ss_params["ss_url"];  // имя базового url (с примечанием)
 
         $this->cb_find_internal_url = $ss_params["cb_find_internal_url"]; // парсинг страниц для поиска ссылок
             $this->rb_url_source = $ss_params["rb_url_source"];  // откуда брать источник для парсинга.
@@ -94,7 +102,7 @@ class ParsModel extends Model
           $this->addlog("Нам есть что считать");
 
             $this->fetch_source_page(); // сдвигаем указатель на страницу
-            while  ($this->curr_sp_id!=0){
+            while  ($this->sp_id!=0){
 
             $this->addlog("Итеррация: ". $this->sp_url);
             
@@ -103,7 +111,7 @@ class ParsModel extends Model
 
                 if ($this->cb_type_source_page == '1' and empty($this->sp_dp_id)) // если страницу нужно типизировать
                 { 
-                    $this->choose_pattern(); // пока не работает
+                    $this->choose_pattern(); // требует тестирования
                 }
 
                 if ($this->rb_url_source == 'rb_seek_url_onsite'){  // если нужно выгрести ссылки на текущей странице 
@@ -119,7 +127,7 @@ class ParsModel extends Model
             }
         }
 
-        if ($this->cb_download_img == '1') // скачивать картинки
+        if ($this->cb_download_img == '1') // чекбокс - скачать картинки
             {
                 $this->addlog("Нужно скачать картинки");            
                 $this->ri_img_path .= $this->ss_id;
@@ -129,7 +137,7 @@ class ParsModel extends Model
     }
 
 
-
+    // ************************************************
     // № 1. загружает по ссылке страницу в переменную $current_page_body и созданный DOM объект в current_page_DOM
     function get_page()
     {
@@ -139,28 +147,29 @@ class ParsModel extends Model
         $this->current_page_xpath = new \DomXPath($current_page_DOM);
     }
 
-
+    //*******************************************************
+    //   ДЕЛАЕТ 1 ШАГ 
     // При вызове выбирает следующую страницу source_page.sp_id
     function fetch_source_page()
     {
         $row = (new \yii\db\Query())
             ->select(['sp_id', 'sp_url', 'sp_dp_id'])
             ->from('source_page')
-            ->where('sp_ss_id = :sp_ss_id and sp_id>:curr_sp_id and sp_parsed=0')
+            ->where('sp_ss_id = :sp_ss_id and sp_id>:sp_id and sp_parsed=0')
             ->addParams([':sp_ss_id' => $this->ss_id, 
-                        ':curr_sp_id' =>  $this->curr_sp_id ])
+                        ':sp_id' =>  $this->sp_id ])
             ->limit(1)
             ->orderBy(['sp_id' => SORT_ASC])
             ->one();
         
         if (!empty($row['sp_id'])){  // если есть следующая страница для разбора
-            $this->curr_sp_id = $row['sp_id'];  // ставим указатель на текущую страницу
+            $this->sp_id = $row['sp_id'];  // ставим указатель на текущую страницу
             $this->sp_url = $row['sp_url'];  // текущий URL
             $this->sp_dp_id = $row['sp_dp_id'];
             $this->addlog("fetch_source_page(): ".$this->sp_url);
 
         } else {  // разбор окончен, больше страниц нет
-            $this->curr_sp_id = 0;
+            $this->sp_id = 0;
         };
     }
 
@@ -171,19 +180,59 @@ class ParsModel extends Model
 
     }
 
+
+
+    //*****************************************************************
     /* Типизирует страницу 
-    подбирает наиболее подходящую схему для парсинга. Запихивает результат в source_page.sp_dp_id И переменную $dp_id
+    подбирает наиболее подходящую схему для парсинга. Запихивает результат в source_page.sp_dp_id 
+    И переменную $sp_dp_id
+
+    запускает цикл по таблице pars_rule с условием pars_rule.pr_dt_id = 1 (детектор страницы) и
+    dir_page_cms.dp_dc_id = ss_dc_id.
+    Как только pars_rule.pr_selector присутсвует на странице - присваиваем странице source_page.sp_dp_id значение dir_page_cms.dp_id 
     */
     function choose_pattern()
     {
+       $this->addlog("COME IN choose_pattern()");
 
-        $expression = '/html/body/div[1]/div[2]/div[2]/div/div[1]/div[2]/form/div[2]/div[8]/b';
-        $expression = sprintf('count(%s) > 0', $expression);
-        if $this->current_page_xpath->evaluate($expression);
-        
-        return 
+      if (!empty($this->sp_dp_id)) return; // если уже есть определение страницы - выходим
+
+      $this->addlog("EXECUTE choose_pattern()");
+
+      // Цикл по типизаторам текущего CMS
+      $row = (new \yii\db\Query())
+            ->select(['pars_rule.pr_selector', 'dir_page_cms.dp_id'])
+            ->from('pars_rule')
+            ->join('LEFT JOIN', 'dir_page_cms', 'pars_rule.pr_dp_id = dir_page_cms.dp_id')
+            ->where('dir_page_cms.dp_dc_id = :dp_dc_id and pars_rule.pr_dt_id = 1') // 1 - это id тега поля-типизатора
+            ->addParams([':dp_dc_id' => $this->dc_id, ])
+            ->all();
+
+      foreach ($row as $pars_cond) 
+      {
+          // $expression = '/html/body/div[1]/div[2]/div[2]/div/div[1]/div[2]/form/div[2]/div[8]/b';
+        if (!empty($pars_cond['pr_selector']))
+        {
+          
+          $expression = $pars_cond['pr_selector'];
+          $expression = sprintf('count(%s) > 0', $expression);
+
+          if ($this->current_page_xpath->evaluate($expression)) // если нашли первое совпадение
+          {
+            // сохраняем результат в базу
+            Yii::$app->db->createCommand()
+                         ->update('source_page', 
+                                ['sp_dp_id' => $pars_cond['dp_id'],], 
+                                'sp_id = '.$this->sp_id) 
+                         ->execute();
+            $this->sp_dp_id = $pars_cond['dp_id'];
+            break;
+          };    
+        };
+      };
     }
 
+    //*********************************************************************
     // основная функция парсинга, которая пытается вытянуть данные по всем известным ей шаблонам
     // и занести результаты в таблицу result_data
     function get_content(){
@@ -290,7 +339,7 @@ class ParsModel extends Model
     function addlog($txt)
     {
         $this->parslog .= $txt.'<br>';
-       // error_log($this->parslog);
+        //error_log($this->parslog);
     }
 
 }
