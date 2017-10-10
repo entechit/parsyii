@@ -48,17 +48,18 @@ class ParsModel extends Model
     public $rb_url_source; // где искать ссылки rb_seek_url_onsite / rb_seek_url_sitemap
     public $cb_type_source_page; // нужно ли типизировать страницы
     public $cb_pars_source_page; // выполнить парсинг
+    public $cb_download_img; // скачать картинки
 
     public $ss_descript;  //
     
 
     // Формируем переменную коннекта к базе данных
     function __construct(){
-        $db = Yii::$app->db;
+       // $db = Yii::$app->db;
         $this->curr_sp_id = -1;
         $this->parslog = '';
         $this->ri_img_path = '../parsdata/';
-        $this->is_proxy = false;
+        $this->is_proxy = true;
     }
 
 
@@ -73,12 +74,14 @@ class ParsModel extends Model
         
         $this->cb_type_source_page = $ss_params["cb_type_source_page"]; // необходимо типизировать страницы
         $this->cb_pars_source_page = $ss_params["cb_pars_source_page"]; // необходимо выдрать все известные теги
+        $this->cb_download_img = $ss_params["cb_download_img"]; // скачать картинки
     
 
           $this->addlog("cb_pars_source_page=".$this->cb_pars_source_page);
           $this->addlog("cb_type_source_page=".$this->cb_type_source_page);
           $this->addlog("cb_find_internal_url=".$this->cb_find_internal_url);
           $this->addlog("rb_url_source=".$this->rb_url_source);
+          $this->addlog("cb_download_img=".$this->cb_download_img);
 
         // если нужно чета делать кроме как загрузить уже найденные ссылки
         if (($this->cb_pars_source_page == 1) or 
@@ -114,14 +117,14 @@ class ParsModel extends Model
 
                 $this->fetch_source_page(); // сдвигаем указатель на страницу
             }
+        }
 
-            if ($this->cb_pars_source_page == '1') // если таки нужно выдрать данные - картиники
+        if ($this->cb_download_img == '1') // скачивать картинки
             {
+                $this->addlog("Нужно скачать картинки");            
                 $this->ri_img_path .= $this->ss_id;
                 $this->get_img(); // скачиваем картинки РАБОТАЕТ!
             };
-
-        }
         $this->addlog("Анализ закончен");
     }
 
@@ -173,8 +176,12 @@ class ParsModel extends Model
     */
     function choose_pattern()
     {
+
+        $expression = '/html/body/div[1]/div[2]/div[2]/div/div[1]/div[2]/form/div[2]/div[8]/b';
         $expression = sprintf('count(%s) > 0', $expression);
-        return $this->current_page_xpath->evaluate($expression);
+        if $this->current_page_xpath->evaluate($expression);
+        
+        return 
     }
 
     // основная функция парсинга, которая пытается вытянуть данные по всем известным ей шаблонам
@@ -218,7 +225,7 @@ class ParsModel extends Model
             $opts = array( 
                  "ssl"=>array(
                     "verify_peer"=>false,
-                "verify_peer_name"=>false,
+                    "verify_peer_name"=>false,
                 ), 
             );
         }
@@ -287,3 +294,5 @@ class ParsModel extends Model
     }
 
 }
+
+

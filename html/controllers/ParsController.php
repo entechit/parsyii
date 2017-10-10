@@ -28,7 +28,9 @@ class ParsController extends Controller
         if (Yii::$app->request->post('source-site-action-button')!==null): // нажата кнопка запустить анализ 
                 
             $url_fields=Yii::$app->request->post('SourceSiteForm');
+
             $this->model->main_pars_f($url_fields);
+            
             if (!empty($url_fields['ss_id'])){
                 $session = Yii::$app->session;
                 $session->set('ss_id', $url_fields['ss_id']);

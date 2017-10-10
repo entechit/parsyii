@@ -46,8 +46,8 @@ $this->params['breadcrumbs'][] = $this->title;
                         'action'=>'/pars/pars'   // вызываем экшн контроллера
                         ]); ?>
 
-                <?= $form->field($model, 'ss_id')->hiddenInput(['id'=> "ss_id"])->label(''); ?>
-                <?= $form->field($model, 'ss_url')->hiddenInput(['id'=> "ss_url"])->label(''); ?>
+                <?= $form->field($model, 'ss_id')->hiddenInput(['id'=> "ss_id"])->label(false); ?>
+                <?= $form->field($model, 'ss_url')->hiddenInput(['id'=> "ss_url"])->label(false); ?>
 
                 <?php $model->rb_url_source = 'rb_seek_url_onsite'; ?>
                     <?= $form2->field($model, 'rb_url_source')->radioList([
@@ -67,6 +67,11 @@ $this->params['breadcrumbs'][] = $this->title;
                     ]); ?>
 
                     <?= $form2->field($model, 'cb_pars_source_page')->checkbox(['label' => 'распарсить найденные страницы', 'labelOptions' => [
+                        'style' => 'padding-left:20px;' ],
+                        'disabled' => false,
+                    ]); ?>
+
+                    <?= $form2->field($model, 'cb_download_img')->checkbox(['label' => 'скачать найденные изображения', 'labelOptions' => [
                         'style' => 'padding-left:20px;' ],
                         'disabled' => false,
                     ]); ?>

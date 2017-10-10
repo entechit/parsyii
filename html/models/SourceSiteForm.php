@@ -24,6 +24,7 @@ class SourceSiteForm extends Model
     public $cb_type_source_page;
     public $cb_pars_source_page;
     public $rb_url_source;
+    public $cb_download_img;
 
 
     // Формируем переменную коннекта к базе данных
