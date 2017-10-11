@@ -60,7 +60,7 @@ class ParsModel extends Model
         $this->sp_id = -1;
         $this->parslog = '';
         $this->ri_img_path = '../parsdata/';
-        $this->is_proxy = false;
+        $this->is_proxy = true;
 
     }
 
@@ -106,15 +106,21 @@ class ParsModel extends Model
 
             $this->addlog("Итеррация: ". $this->sp_url);
             
-
-                $this->get_page(); // вытягиваем страницу для анализа
+                try {
+                    $this->get_page(); // вытягиваем страницу для анализа
+                } catch ( yii\base\ErrorException $e) {
+                    $this->mark_error_sp($e);
+                    continue;
+                };
+                
 
                 if ($this->cb_type_source_page == '1' and empty($this->sp_dp_id)) // если страницу нужно типизировать
                 { 
                     $this->choose_pattern(); // требует тестирования
                 }
 
-                if ($this->rb_url_source == 'rb_seek_url_onsite'){  // если нужно выгрести ссылки на текущей странице 
+                if (($this->cb_find_internal_url == 1) and ($this->rb_url_source == 'rb_seek_url_onsite'))
+                {  // если нужно выгрести ссылки на текущей странице 
                     $this->seek_urls();  // пока не работает
                 }
 
@@ -142,8 +148,14 @@ class ParsModel extends Model
     function get_page()
     {
         $this->current_page_body = $this->file_get_contents_proxy($this->sp_url); 
+
+file_put_contents($this->sp_id.'.txt', $this->current_page_body, FILE_APPEND);
+
+die;
         $current_page_DOM = new \DOMDocument();
-        @$current_page_DOM->loadHTML($current_page_body); 
+        // нам не нужны проблемы с пробелами
+        $current_page_DOM->preserveWhiteSpace = false;
+        @$current_page_DOM->loadHTML($this->current_page_body); 
         $this->current_page_xpath = new \DomXPath($current_page_DOM);
     }
 
@@ -176,8 +188,46 @@ class ParsModel extends Model
 
 
     // в переменной $current_page_body находит уникальные ссылки и запихивает  в таблицу найденных ссылок
-    function seek_urls(){
+    function seek_urls()
+    {
+        $nodes = $this->current_page_xpath->query('.//a/@href');
+        foreach ($nodes as $node) 
+        {
+            $res_url = trim($node->nodeValue);
+            // var_dump($node->nodeValue);
+            // die;
 
+            // массив расширений, на которые если заканчивается - нам не нужны
+            $exts = array('.jpg','.png', '.JPG','.PNG'); 
+            if (($res_url == '#') or (in_array(substr($res_url,-4,4), $exts)))
+            {
+                continue;
+                //$this->addlog("seek_urls() найдена ссылка: ".$node->nodeValue);
+            } elseif (substr($res_url,0,2) == '//'){
+                    // оставляем как есть
+            } elseif (substr($res_url,0,1) == '/') // дописываем домен
+            {
+                $res_url = $this->ss_url.$res_url;
+            } elseif (substr($res_url,0,strlen($this->ss_url)) != $this->ss_url) // если внешняя ссылка
+            {
+                continue;
+            };
+          
+            // если мы сюда дошли, значит есть ссылка для сохранения
+            if (!empty($res_url))
+            {
+                try {
+                    Yii::$app->db->createCommand()
+                             ->insert('source_page', 
+                                ["sp_ss_id" => $this->ss_id,
+                                "sp_url" => $res_url,]) 
+                             ->execute();
+
+                }  catch(\yii\db\Exception $e) {
+                    //
+                };
+            };
+        };
     }
 
 
@@ -193,11 +243,11 @@ class ParsModel extends Model
     */
     function choose_pattern()
     {
-       $this->addlog("COME IN choose_pattern()");
+    //   $this->addlog("COME IN choose_pattern()");
 
       if (!empty($this->sp_dp_id)) return; // если уже есть определение страницы - выходим
 
-      $this->addlog("EXECUTE choose_pattern()");
+    //  $this->addlog("EXECUTE choose_pattern()");
 
       // Цикл по типизаторам текущего CMS
       $row = (new \yii\db\Query())
@@ -208,17 +258,19 @@ class ParsModel extends Model
             ->addParams([':dp_dc_id' => $this->dc_id, ])
             ->all();
 
+
       foreach ($row as $pars_cond) 
       {
-          // $expression = '/html/body/div[1]/div[2]/div[2]/div/div[1]/div[2]/form/div[2]/div[8]/b';
+        
         if (!empty($pars_cond['pr_selector']))
         {
           
-          $expression = $pars_cond['pr_selector'];
-          $expression = sprintf('count(%s) > 0', $expression);
+           $expression = sprintf('count(%s) > 0', $pars_cond['pr_selector']);
+            
 
           if ($this->current_page_xpath->evaluate($expression)) // если нашли первое совпадение
           {
+         //   $this->addlog("choose_pattern() НАШЛИ совпадения");
             // сохраняем результат в базу
             Yii::$app->db->createCommand()
                          ->update('source_page', 
@@ -279,7 +331,7 @@ class ParsModel extends Model
             );
         }
 
-        $this->addlog("Download Content file_get_contents_proxy(): ".$url);
+       // $this->addlog("Download Content file_get_contents_proxy(): ".$url);
         $ctx = stream_context_create($opts); 
             // возвращаем содержимое страницы с прокси параметрами или нет
         return file_get_contents($url,false,$ctx); 
@@ -297,10 +349,10 @@ class ParsModel extends Model
     */
     function get_img(){
         $counter_img = 0;
-        $this->addlog("Вынимаем картинки");
+       // $this->addlog("Вынимаем картинки");
 
         if( !is_dir( $this->ri_img_path)){ 
-            $this->addlog("Создан новый каталог: ".$this->ri_img_path);
+        //    $this->addlog("Создан новый каталог: ".$this->ri_img_path);
             mkdir( $this->ri_img_path, 0777, true );
         };
 
@@ -340,6 +392,16 @@ class ParsModel extends Model
     {
         $this->parslog .= $txt.'<br>';
         //error_log($this->parslog);
+    }
+
+    // в таблице source_page помечает страницу как ошибочную, чтобы исключить дальнейшую обработку
+    function mark_error_sp($e)
+    {
+        Yii::$app->db->createCommand()
+                         ->update('source_page', 
+                                ['sp_error' => Substr($e,0,250), ], 
+                                'sp_id = '.$this->sp_id) 
+                         ->execute();
     }
 
 }
