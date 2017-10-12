@@ -34,13 +34,19 @@ class ParsModel extends Model
 
     public $dc_id;             // код CMS 
 
+    public $counter_dl_img; // количество скачаных картинок
+    public $counter_dl_pages; // количество скачаных страниц
+    public $counter_add_pages; // количество добавленных в набор страниц
+    public $counter_type_pages; // количество типизированных страниц
+    public $counter_steps;
+
+
+
+
     /* следующие переменные под вопросом */
   //  public $current_page_DOM; // здесь сидит DOM объект???
 
     public $ss_url;
-
-
-
 
     public $dp_id;          // id шаблона страницы, которым как мы считаем нужно парсить
     
@@ -50,7 +56,7 @@ class ParsModel extends Model
     public $cb_type_source_page; // нужно ли типизировать страницы
     public $cb_pars_source_page; // выполнить парсинг
     public $cb_download_img; // скачать картинки
-
+    
     public $ss_descript;  //
     
 
@@ -61,6 +67,15 @@ class ParsModel extends Model
         $this->parslog = '';
         $this->ri_img_path = '../parsdata/';
         $this->is_proxy = true;
+
+        $this->counter_dl_img = 0; // количество скачаных картинок
+        $this->counter_dl_pages = 0; // количество скачаных страниц
+        $this->counter_add_pages = 0; // количество добавленных в набор страниц
+        $this->counter_type_pages = 0; // количество типизированных страниц
+        $this->counter_steps = 0; // сделано шагов по справочнику страниц
+
+
+
 
     }
 
@@ -104,8 +119,6 @@ class ParsModel extends Model
             $this->fetch_source_page(); // сдвигаем указатель на страницу
             while  ($this->sp_id!=0){
 
-            $this->addlog("Итеррация: ". $this->sp_url);
-            
                 try {
                     $this->get_page(); // вытягиваем страницу для анализа
                 } catch ( yii\base\ErrorException $e) {
@@ -113,8 +126,7 @@ class ParsModel extends Model
                     continue;
                 };
                 
-
-                if ($this->cb_type_source_page == '1' and empty($this->sp_dp_id)) // если страницу нужно типизировать
+                if ($this->cb_type_source_page == '1' and empty($this->sp_dp_id)) // нужно типизировать
                 { 
                     $this->choose_pattern(); // требует тестирования
                 }
@@ -134,12 +146,21 @@ class ParsModel extends Model
         }
 
         if ($this->cb_download_img == '1') // чекбокс - скачать картинки
-            {
-                $this->addlog("Нужно скачать картинки");            
-                $this->ri_img_path .= $this->ss_id;
-                $this->get_img(); // скачиваем картинки РАБОТАЕТ!
-            };
+        {
+            $this->addlog("Нужно скачать картинки");
+            $this->ri_img_path .= $this->ss_id;
+            $this->get_img(); // скачиваем картинки РАБОТАЕТ!
+        };
+        // выводим на экран статистику
+        $this->addlog("Выполнено шагов по страницам: ".$this->counter_steps); 
+
+        $this->addlog("Скачано страниц: ".$this->counter_dl_pages); 
+        $this->addlog("Типизировано страниц: ".$this->counter_type_pages); 
+        $this->addlog("Добавлено новых URL в набор: ".$this->counter_add_pages); 
+        $this->addlog("Скачано картинок:  ".$this->counter_dl_img); 
+
         $this->addlog("Анализ закончен");
+
     }
 
 
@@ -149,14 +170,16 @@ class ParsModel extends Model
     {
         $this->current_page_body = $this->file_get_contents_proxy($this->sp_url); 
 
-file_put_contents($this->sp_id.'.txt', $this->current_page_body, FILE_APPEND);
+//file_put_contents($this->sp_id.'.txt', $this->current_page_body, FILE_APPEND);
+//die;
 
-die;
         $current_page_DOM = new \DOMDocument();
         // нам не нужны проблемы с пробелами
         $current_page_DOM->preserveWhiteSpace = false;
         @$current_page_DOM->loadHTML($this->current_page_body); 
         $this->current_page_xpath = new \DomXPath($current_page_DOM);
+
+        ++ $this->counter_dl_pages;
     }
 
     //*******************************************************
@@ -167,7 +190,7 @@ die;
         $row = (new \yii\db\Query())
             ->select(['sp_id', 'sp_url', 'sp_dp_id'])
             ->from('source_page')
-            ->where('sp_ss_id = :sp_ss_id and sp_id>:sp_id and sp_parsed=0')
+            ->where('sp_ss_id = :sp_ss_id and sp_id>:sp_id and sp_parsed=0 and sp_error is null')
             ->addParams([':sp_ss_id' => $this->ss_id, 
                         ':sp_id' =>  $this->sp_id ])
             ->limit(1)
@@ -178,7 +201,8 @@ die;
             $this->sp_id = $row['sp_id'];  // ставим указатель на текущую страницу
             $this->sp_url = $row['sp_url'];  // текущий URL
             $this->sp_dp_id = $row['sp_dp_id'];
-            $this->addlog("fetch_source_page(): ".$this->sp_url);
+
+            ++ $this->counter_steps;
 
         } else {  // разбор окончен, больше страниц нет
             $this->sp_id = 0;
@@ -186,8 +210,8 @@ die;
     }
 
 
-
-    // в переменной $current_page_body находит уникальные ссылки и запихивает  в таблицу найденных ссылок
+    //************************************************************************************************
+    // в переменной $current_page_body находит уникальные ссылки и запихивает в таблицу найденных ссылок
     function seek_urls()
     {
         $nodes = $this->current_page_xpath->query('.//a/@href');
@@ -222,6 +246,8 @@ die;
                                 ["sp_ss_id" => $this->ss_id,
                                 "sp_url" => $res_url,]) 
                              ->execute();
+
+                    ++ $this->counter_add_pages;
 
                 }  catch(\yii\db\Exception $e) {
                     //
@@ -277,6 +303,7 @@ die;
                                 ['sp_dp_id' => $pars_cond['dp_id'],], 
                                 'sp_id = '.$this->sp_id) 
                          ->execute();
+            ++ $this->counter_type_pages;
             $this->sp_dp_id = $pars_cond['dp_id'];
             break;
           };    
@@ -284,16 +311,6 @@ die;
       };
     }
 
-    //*********************************************************************
-    // основная функция парсинга, которая пытается вытянуть данные по всем известным ей шаблонам
-    // и занести результаты в таблицу result_data
-    function get_content(){
-        $nodes = $this->current_page_xpath->query(".//*[contains(@class, 'img')]/img");
-        foreach ($nodes as $i => $node) {
-          //      $src = $node->nodeValue;
-        } 
-       // return $src;
-    }
 
     //*************************************************************
     // вытягивает страницу в переменную current_page_body
@@ -348,9 +365,7 @@ die;
         3. Именуем картинку result_img.ri_id.jpg 
     */
     function get_img(){
-        $counter_img = 0;
-       // $this->addlog("Вынимаем картинки");
-
+      
         if( !is_dir( $this->ri_img_path)){ 
         //    $this->addlog("Создан новый каталог: ".$this->ri_img_path);
             mkdir( $this->ri_img_path, 0777, true );
@@ -362,8 +377,6 @@ die;
             ->where('ri_img_name is null and ri_ss_id = :ri_ss_id')
             ->addParams(['ri_ss_id'=>$this->ss_id]);
         
-
-           
 
         // цикл по одной записи. Выполняет запрос при первой итеррации
         foreach ($row->each() as $img_row) {
@@ -379,9 +392,9 @@ die;
                                 'ri_img_path' => $this->ri_img_path, ], 
                                 'ri_id = '.$img_row['ri_id']) 
                          ->execute();
-            ++ $counter_img;
+        
+            ++ $this->counter_dl_img;
         }
-        $this->addlog("Обработано (скачано) картинок: ".$counter_img);
     }
 
 
@@ -404,6 +417,23 @@ die;
                          ->execute();
     }
 
+
+    //*********************************************************************
+    // основная функция парсинга, которая пытается вытянуть данные по всем известным ей шаблонам
+    // и занести результаты в таблицу result_data
+    /*
+    
+    Выбираем ВСЕ pars_rule которые соответствуют dir_page_cms
+
+    */
+    //*********************************************************************
+    function get_content(){
+        $nodes = $this->current_page_xpath->query(".//*[contains(@class, 'img')]/img");
+        foreach ($nodes as $i => $node) {
+          //      $src = $node->nodeValue;
+        } 
+       // return $src;
+    }
+
+
 }
-
-
