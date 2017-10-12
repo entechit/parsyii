@@ -66,7 +66,7 @@ class ParsModel extends Model
         $this->sp_id = -1;
         $this->parslog = '';
         $this->ri_img_path = '../parsdata/';
-        $this->is_proxy = true;
+        $this->is_proxy = false;
 
         $this->counter_dl_img = 0; // количество скачаных картинок
         $this->counter_dl_pages = 0; // количество скачаных страниц
@@ -428,12 +428,74 @@ class ParsModel extends Model
     */
     //*********************************************************************
     function get_content(){
-        $nodes = $this->current_page_xpath->query(".//*[contains(@class, 'img')]/img");
-        foreach ($nodes as $i => $node) {
-          //      $src = $node->nodeValue;
-        } 
-       // return $src;
+
+      // цикл по корневым правилам
+       $rules_rows = (new \yii\db\Query())
+            ->select(['pars_rule.*, dir_tags.*',])
+            ->from('pars_rule')
+            ->join('LEFT JOIN', 'dir_tags', 'pars_rule.pr_dt_id = dir_tags.dt_id')
+            ->where('pars_rule.pr_dp_id = :pr_dp_id and (pars_rule.pr_id_parent is null and pars_rule.pr_id_parent="")')
+            ->addParams([':pr_dp_id'=>$this->sp_dp_id]);
+
+        foreach ($rules_rows as $rules_row) 
+        {    
+          
+          if ($rules_row['pr_nodetype']=='q')
+          {
+            $rule_nodes = $this->current_page_xpath->query($rules_row['pr_selector']);
+            foreach ($rule_nodes as $rule_node) 
+            {
+
+              // идем внутри полученного набора элементов    
+              $node_rows = (new \yii\db\Query())
+                  ->select(['pars_rule.*, dir_tags.*',])
+                  ->from('pars_rule')
+                  ->join('LEFT JOIN', 'dir_tags', 'pars_rule.pr_dt_id = dir_tags.dt_id')
+                  ->where('pars_rule.pr_dp_id = :pr_dp_id and pars_rule.pr_id_parent = :pr_id')
+                  ->addParams([':pr_dp_id'=>$this->sp_dp_id,
+                               ':pr_id'=>$rules_row['pr_id'],]);
+
+              foreach ($node_rows as $node_row) 
+              {    
+                $this->get_node($rule_node, $node_row );
+              }
+            }
+
+          } elseif($rules_row['pr_nodetype']=='n') { // одиночный элемент
+            $this->get_node($this->current_page_xpath, $rules_row );
+          }
+
+        };
     }
 
+
+    //**********************************************
+    // вынимает конкретные данные и пишет в базу
+    function get_node($node, $selector, $dt_id)
+    {
+      $res_node = $node->query($selector['pr_selector']);
+      $val = $res_node->nodeValue;
+
+      Yii::$app->db->createCommand()
+                   ->insert('result_data', 
+                           ["rd_ss_id" => $this->ss_id,
+                           "rd_sp_id" =>  $this->sp_id,
+                           "rd_dt_id" => $selector['pr_dt_id'],
+                           $selector['dt_rd_field'] => $val,]) 
+                   ->execute();
+
+      if ($selector['dt_is_img']==1)
+      {
+        Yii::$app->db->createCommand()
+                   ->insert('result_img', 
+                           ["ri_ss_id" => $this->ss_id,
+                           "ri_rd_id" =>  Yii::app()->db->getLastInsertID(),
+                           "ri_source_url" => $val,]) 
+                   ->execute();
+
+      }
+
+    }
+  //*********************************
 
 }
