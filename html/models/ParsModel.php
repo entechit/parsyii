@@ -66,7 +66,7 @@ class ParsModel extends Model
         $this->sp_id = -1;
         $this->parslog = '';
         $this->ri_img_path = '../parsdata/';
-        $this->is_proxy = false;
+        $this->is_proxy = true;
 
         $this->counter_dl_img = 0; // количество скачаных картинок
         $this->counter_dl_pages = 0; // количество скачаных страниц
@@ -218,8 +218,6 @@ class ParsModel extends Model
         foreach ($nodes as $node) 
         {
             $res_url = trim($node->nodeValue);
-            // var_dump($node->nodeValue);
-            // die;
 
             // массив расширений, на которые если заканчивается - нам не нужны
             $exts = array('.jpg','.png', '.JPG','.PNG'); 
@@ -430,39 +428,25 @@ class ParsModel extends Model
     function get_content(){
 
       // цикл по корневым правилам
-       $rules_rows = (new \yii\db\Query())
-            ->select(['pars_rule.*, dir_tags.*',])
+       $rules_rows_parent = (new \yii\db\Query())
+            ->select(['pars_rule.*', 'dir_tags.dt_rd_field', 'dir_tags.dt_is_img',])
             ->from('pars_rule')
             ->join('LEFT JOIN', 'dir_tags', 'pars_rule.pr_dt_id = dir_tags.dt_id')
-            ->where('pars_rule.pr_dp_id = :pr_dp_id and (pars_rule.pr_id_parent is null and pars_rule.pr_id_parent="")')
+            ->where('pars_rule.pr_dp_id = :pr_dp_id and (pars_rule.pr_id_parent is null or pars_rule.pr_id_parent="")')
             ->addParams([':pr_dp_id'=>$this->sp_dp_id]);
 
-        foreach ($rules_rows as $rules_row) 
+
+        foreach ($rules_rows_parent->each() as $rules_row_parent) 
         {    
-          
-          if ($rules_row['pr_nodetype']=='q')
+
+          if ($rules_row_parent['pr_nodetype']=='q') // набор элементов
           {
-            $rule_nodes = $this->current_page_xpath->query($rules_row['pr_selector']);
-            foreach ($rule_nodes as $rule_node) 
-            {
 
-              // идем внутри полученного набора элементов    
-              $node_rows = (new \yii\db\Query())
-                  ->select(['pars_rule.*, dir_tags.*',])
-                  ->from('pars_rule')
-                  ->join('LEFT JOIN', 'dir_tags', 'pars_rule.pr_dt_id = dir_tags.dt_id')
-                  ->where('pars_rule.pr_dp_id = :pr_dp_id and pars_rule.pr_id_parent = :pr_id')
-                  ->addParams([':pr_dp_id'=>$this->sp_dp_id,
-                               ':pr_id'=>$rules_row['pr_id'],]);
+            $this->get_query($this->current_page_xpath, $rules_row_parent);
 
-              foreach ($node_rows as $node_row) 
-              {    
-                $this->get_node($rule_node, $node_row );
-              }
-            }
-
-          } elseif($rules_row['pr_nodetype']=='n') { // одиночный элемент
-            $this->get_node($this->current_page_xpath, $rules_row );
+          } elseif($rules_row_parent['pr_nodetype']=='n') // одиночный элемент
+          { 
+            $this->get_node($this->current_page_xpath, $rules_row_parent );
           }
 
         };
@@ -470,13 +454,49 @@ class ParsModel extends Model
 
 
     //**********************************************
-    // вынимает конкретные данные и пишет в базу
-    function get_node($node, $selector, $dt_id)
+    // вынимает набор данных
+    function get_query($node, $selector)
     {
-      $res_node = $node->query($selector['pr_selector']);
-      $val = $res_node->nodeValue;
+        $rule_nodes = $node->query($selector['pr_selector']);
 
-      Yii::$app->db->createCommand()
+        foreach ($rule_nodes as $rule_node) // идем внутри полученного набора элементов
+        {
+
+            
+            $rules_rows_sub = (new \yii\db\Query())
+                  ->select(['pars_rule.*', 'dir_tags.dt_rd_field', 'dir_tags.dt_is_img',])
+                  ->from('pars_rule')
+                  ->join('LEFT JOIN', 'dir_tags', 'pars_rule.pr_dt_id = dir_tags.dt_id')
+                  ->where('pars_rule.pr_dp_id = :pr_dp_id and pars_rule.pr_id_parent = :pr_id')
+                  ->addParams([':pr_dp_id' => $this->sp_dp_id,
+                               ':pr_id'    => $selector['pr_id'],]);
+
+
+            foreach ($rules_rows_sub->each() as $rules_row_sub) 
+            {    
+                if ($rules_row_sub['pr_nodetype']=='q'){
+                    $this->get_node($rule_node, $rules_row_sub);    
+                } elseif ($rules_row_sub['pr_nodetype']=='n') {
+                     $this->get_node($rule_node, $rules_row_sub);
+                }
+            }
+        }
+    }
+
+    //**********************************************
+    // вынимает конкретные данные и пишет в базу
+    function get_node($node, $selector)
+    {
+        //var_dump($node);die;
+
+        $res_nodes = $node->query($selector['pr_selector']);
+
+        foreach ($res_nodes as $i => $res_node) 
+        {
+            $val = trim($res_node->nodeValue);
+        };
+        if (!empty($val)){
+            Yii::$app->db->createCommand()
                    ->insert('result_data', 
                            ["rd_ss_id" => $this->ss_id,
                            "rd_sp_id" =>  $this->sp_id,
@@ -484,16 +504,21 @@ class ParsModel extends Model
                            $selector['dt_rd_field'] => $val,]) 
                    ->execute();
 
-      if ($selector['dt_is_img']==1)
-      {
-        Yii::$app->db->createCommand()
+            if ($selector['dt_is_img']==1)
+            {
+
+                if ((substr($val,0,1) == '/') and (substr($val,0,2) != '//')) // дописываем домен
+                {
+                    $val = $this->ss_url.$val;
+                } 
+                Yii::$app->db->createCommand()
                    ->insert('result_img', 
                            ["ri_ss_id" => $this->ss_id,
-                           "ri_rd_id" =>  Yii::app()->db->getLastInsertID(),
+                           "ri_rd_id" =>  Yii::$app->db->getLastInsertID(),
                            "ri_source_url" => $val,]) 
                    ->execute();
-
-      }
+            };
+        };
 
     }
   //*********************************
