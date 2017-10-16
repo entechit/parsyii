@@ -22,6 +22,7 @@ class SourceSiteForm extends Model
 
     public $cb_find_internal_url;
     public $cb_type_source_page;
+    public $cb_download_page;
     public $cb_pars_source_page;
     public $rb_url_source;
     public $cb_download_img;

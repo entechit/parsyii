@@ -61,6 +61,12 @@ $this->params['breadcrumbs'][] = $this->title;
                     ]); ?>
 
 
+                    <?= $form2->field($model, 'cb_download_page')->checkbox(['label' => 'сохранить в файл первую не типизированную страницу', 'labelOptions' => [
+                        'style' => 'padding-left:20px;' ],
+                        'disabled' => false,
+                    ]); ?>
+
+
                     <?= $form2->field($model, 'cb_type_source_page')->checkbox(['label' => 'типизировать найденные страницы', 'labelOptions' => [
                         'style' => 'padding-left:20px;' ],
                         'disabled' => false,
