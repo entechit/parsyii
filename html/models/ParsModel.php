@@ -24,6 +24,7 @@ class ParsModel extends Model
     public $sp_dp_id;     // тип текущей страницы
     PUblic $ri_img_path;  // путь по которому сохранены картинки
     public $dc_id;        // код CMS 
+    public $HTTP_status;  // статус ответа загружаемой страницы
 
     public $counter_dl_img;     // количество скачаных картинок
     public $counter_dl_pages;   // количество скачаных страниц
@@ -166,18 +167,25 @@ class ParsModel extends Model
       $res = '';
       try {
         $this->current_page_body = $this->file_get_contents_proxy($this->sp_url); 
-
         $current_page_DOM = new \DOMDocument();
         $current_page_DOM->preserveWhiteSpace = false;
         @$current_page_DOM->loadHTML($this->current_page_body); 
         $this->current_page_xpath = new \DomXPath($current_page_DOM);
 
-        ++ $this->counter_dl_pages;
+        // если ответ в заголовке не 200 ОК значит страница с ошибкой  
+       
+        If (strpos($this->HTTP_status, '200') === false){
+          $this->mark_error_sp($this->HTTP_status);
+          $res = 'continue';
+        } else {
+          ++ $this->counter_dl_pages;  
+        };
 
       } catch (yii\base\ErrorException $e) {
           $this->mark_error_sp($e);
           $res = 'continue';
       };
+     
       return $res;
     }
 
@@ -269,6 +277,7 @@ class ParsModel extends Model
     // вытягивает страницу в переменную current_page_body
     function file_get_contents_proxy($url)
     {
+        $this->HTTP_status = '';
         $auth = base64_encode('sava:123'); 
         if ($this->is_proxy)
         {
@@ -305,7 +314,10 @@ class ParsModel extends Model
        
         ini_set('max_execution_time', 0);
             // возвращаем содержимое страницы с прокси параметрами или нет
-        return file_get_contents($url,false,$ctx); 
+        $res = file_get_contents($url,false,$ctx); 
+        $this->HTTP_status = $http_response_header[0];
+ 
+        return $res;
     }
 
 
@@ -371,9 +383,10 @@ class ParsModel extends Model
     //******************************************************
     function mark_error_sp($e)
     {
+
         Yii::$app->db->createCommand()
                          ->update('source_page', 
-                                ['sp_error' => Substr($e,0,250), ], 
+                                ['sp_error' => Substr($e,0,395), ], 
                                 'sp_id = '.$this->sp_id) 
                          ->execute();
     }
@@ -564,22 +577,26 @@ class ParsModel extends Model
     */
     function download_origin_page() {
 
-       $row = (new \yii\db\Query())
+       $rows = (new \yii\db\Query())
             ->select(['sp_id', 'sp_url', 'sp_dp_id'])
             ->from('source_page')
             ->where('sp_ss_id = :sp_ss_id and sp_id>0 and sp_dp_id is null and sp_error is null')
             ->addParams([':sp_ss_id' => $this->ss_id])
-            ->limit(1)
             ->orderBy(['sp_id' => SORT_ASC])
-            ->one();
-        
-      $this->sp_url = $row['sp_url'];
+            ->all();
+      
+      foreach ($rows as $row) {
 
-      $this->get_page();
-      file_put_contents($row['sp_id'].'.html', $this->current_page_body, FILE_APPEND);
+        $this->sp_url = $row['sp_url'];
+        $this->sp_id = $row['sp_id'];
+        $res = $this->get_page();
 
-      $this->addlog(" На диск сохранен файл:  ".$row['sp_id'].'.html');
-//die;
+        if ($res != 'continue') {
+          file_put_contents($row['sp_id'].'.html', $this->current_page_body, FILE_APPEND);
+          $this->addlog(" На диск сохранен файл:  ".$row['sp_id'].'.html  ссылка: '. $this->sp_url );    
+          break;
+        };
 
+      };  
     }
 }
