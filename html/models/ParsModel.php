@@ -1,11 +1,8 @@
 <?php
-
 namespace app\models;
-
 use Yii;
 use yii\base\Model;
 use yii\data\SqlDataProvider;
-
 //************************************
 //  Базовый класс для парсинга сайтов.
 //************************************
@@ -18,7 +15,7 @@ class ParsModel extends Model
     public $ss_id;        // id задания из таблицы SourceSite
     public $ss_url;
     public $current_page_body;  // здесь сидит текст анализируемой страницы
-    public $current_page_xpath; // структура узлов???
+    public $current_page_xpath; // структура узлов
     public $sp_id;        // указатель на текущую анализируемую страницу в source_page. Если она = 0 разбор закончен
     public $sp_url;       // адрес текущей страницы
     public $sp_dp_id;     // тип текущей страницы
@@ -44,7 +41,7 @@ class ParsModel extends Model
         $this->sp_id = -1;
         $this->parslog = '';
         $this->ri_img_path = '../parsdata/';
-        $this->is_proxy = false;
+        $this->is_proxy = true;
 
         $this->counter_dl_img = 0;      // количество скачаных картинок
         $this->counter_dl_pages = 0;    // количество скачаных страниц
@@ -169,7 +166,7 @@ class ParsModel extends Model
         $this->current_page_body = $this->file_get_contents_proxy($this->sp_url); 
         $current_page_DOM = new \DOMDocument();
         $current_page_DOM->preserveWhiteSpace = false;
-        @$current_page_DOM->loadHTML($this->current_page_body); 
+        @$current_page_DOM->loadHTML('<meta http-equiv="content-type" content="text/html; charset=utf-8">' . $this->current_page_body); 
         $this->current_page_xpath = new \DomXPath($current_page_DOM);
 
         // если ответ в заголовке не 200 ОК значит страница с ошибкой  
@@ -233,6 +230,9 @@ class ParsModel extends Model
     function choose_pattern()
     {
       //$this->addlog(" 0 EXECUTE choose_pattern()");
+      $prev_dp_id = -1;
+      $counter_cond = 0;
+      $counter_vin = 0;
 
       if (!empty($this->sp_dp_id)) return; // если уже есть определение страницы - выходим
 
@@ -243,33 +243,57 @@ class ParsModel extends Model
             ->select(['pars_rule.pr_selector', 'dir_page_cms.dp_id'])
             ->from('pars_rule')
             ->join('LEFT JOIN', 'dir_page_cms', 'pars_rule.pr_dp_id = dir_page_cms.dp_id')
-            ->where('dir_page_cms.dp_dc_id = :dp_dc_id and pars_rule.pr_dt_id = 1') // 1 - это id тега поля-типизатора
+            ->where('dir_page_cms.dp_dc_id = :dp_dc_id and pars_rule.pr_dt_id = 1') // 1 - это id тега   поля-типизатора
+            ->orderBy(['dir_page_cms.dp_id' => SORT_ASC])
             ->addParams([':dp_dc_id' => $this->dc_id, ])
             ->all();
 
+
       foreach ($row as $pars_cond) 
       {
-        if (!empty($pars_cond['pr_selector']))
-        {
-         // $this->addlog(" 2 EXECUTE choose_pattern()  SELECTOR:". $pars_cond['pr_selector']);
+        if (empty($pars_cond['pr_selector'])) continue;
+        
 
-          $expression = sprintf('count(%s) > 0', $pars_cond['pr_selector']);
-            
-          if ($this->current_page_xpath->evaluate($expression)) // если есть хоть одно совпадение
-          {
-           // $this->addlog(" 3 EXECUTE choose_pattern() НАШЛИ совпадения");
+        if (($prev_dp_id != $pars_cond['dp_id']) 
+            and ($counter_vin == $counter_cond) 
+            and  ($prev_dp_id != -1))
+        {
+            break;
+        }
+
+        if ($prev_dp_id != $pars_cond['dp_id'])   
+        {
+            $counter_cond = 1;
+            $counter_vin = 0;
+        }
+
+        if ($prev_dp_id == $pars_cond['dp_id'])   ++ $counter_cond;
+
+              
+        $expression = sprintf('count(%s) > 0', $pars_cond['pr_selector']);
+        if ($this->current_page_xpath->evaluate($expression)) // если есть хоть одно совпадение
+        { 
+            ++ $counter_vin;            
+        };    
+
+          $prev_dp_id = $pars_cond['dp_id'];
+      };
+
+      if ($counter_vin == $counter_cond)
+      {
             // сохраняем результат в базу
             Yii::$app->db->createCommand()
                          ->update('source_page', 
-                                ['sp_dp_id' => $pars_cond['dp_id'],], 
+                                ['sp_dp_id' => $prev_dp_id,], 
                                 'sp_id = '.$this->sp_id) 
                          ->execute();
             ++ $this->counter_type_pages;
-            $this->sp_dp_id = $pars_cond['dp_id'];
-            break;
-          };    
-        };
-      };
+          
+            $this->sp_dp_id = $prev_dp_id;
+          
+        }
+
+
     }
 
 
