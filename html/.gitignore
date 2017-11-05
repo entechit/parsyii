@@ -1,4 +1,3 @@
-/logs
 # phpstorm project files
 .idea
 
@@ -29,3 +28,10 @@ phpunit.phar
 
 tests/_output/*
 tests/_support/_generated
+# ParsYii data
+/parsdata
+/source_page
+/logs
+.parsdata
+.source_page
+.logs

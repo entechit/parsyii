@@ -41,7 +41,8 @@ class ParsModel extends Model
         $this->sp_id = -1;
         $this->parslog = '';
         $this->ri_img_path = '../parsdata/';
-        $this->is_proxy = true;
+        $this->ri_src_path = '../source_page/';
+        $this->is_proxy = false;
 
         $this->counter_dl_img = 0;      // количество скачаных картинок
         $this->counter_dl_pages = 0;    // количество скачаных страниц
@@ -616,7 +617,7 @@ class ParsModel extends Model
         $res = $this->get_page();
 
         if ($res != 'continue') {
-          file_put_contents($row['sp_id'].'.html', $this->current_page_body, FILE_APPEND);
+          file_put_contents($this->ri_src_path.$row['sp_id'].'.html', $this->current_page_body, FILE_APPEND);
           $this->addlog(" На диск сохранен файл:  ".$row['sp_id'].'.html  ссылка: '. $this->sp_url );    
           break;
         };
