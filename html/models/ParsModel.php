@@ -20,6 +20,7 @@ class ParsModel extends Model
     public $sp_url;       // адрес текущей страницы
     public $sp_dp_id;     // тип текущей страницы
     PUblic $ri_img_path;  // путь по которому сохранены картинки
+    public $ri_src_path;
     public $dc_id;        // код CMS 
     public $HTTP_status;  // статус ответа загружаемой страницы
 
@@ -138,7 +139,7 @@ class ParsModel extends Model
         $row = (new \yii\db\Query())
             ->select(['sp_id', 'sp_url', 'sp_dp_id'])
             ->from('source_page')
-            ->where('sp_ss_id = :sp_ss_id and sp_id>:sp_id and sp_parsed=0 and sp_error is null')
+            ->where('sp_ss_id = :sp_ss_id and sp_id>:sp_id and sp_parsed=0 and sp_errors is null')
             ->addParams([':sp_ss_id' => $this->ss_id, 
                         ':sp_id' =>  $this->sp_id ])
             ->limit(1)
@@ -411,7 +412,7 @@ class ParsModel extends Model
 
         Yii::$app->db->createCommand()
                          ->update('source_page', 
-                                ['sp_error' => Substr($e,0,395), ], 
+                                ['sp_errors' => Substr($e,0,395), ], 
                                 'sp_id = '.$this->sp_id) 
                          ->execute();
     }
@@ -605,7 +606,7 @@ class ParsModel extends Model
        $rows = (new \yii\db\Query())
             ->select(['sp_id', 'sp_url', 'sp_dp_id'])
             ->from('source_page')
-            ->where('sp_ss_id = :sp_ss_id and sp_id>0 and sp_dp_id is null and sp_error is null')
+            ->where('sp_ss_id = :sp_ss_id and sp_id>0 and sp_dp_id is null and sp_errors is null')
             ->addParams([':sp_ss_id' => $this->ss_id])
             ->orderBy(['sp_id' => SORT_ASC])
             ->all();
