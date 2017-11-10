@@ -43,7 +43,7 @@ class ParsModel extends Model
         $this->parslog = '';
         $this->ri_img_path = '../parsdata/';
         $this->ri_src_path = '../source_page/';
-        $this->is_proxy = false;
+        $this->is_proxy = true;
 
         $this->counter_dl_img = 0;      // количество скачаных картинок
         $this->counter_dl_pages = 0;    // количество скачаных страниц
@@ -58,6 +58,7 @@ class ParsModel extends Model
     //*************************************************************
     function main_pars_f($ss_params)
     {
+        $this->clear_trace();
         $this->ss_id = $ss_params["ss_id"];
 
         $row_ss = (new \yii\db\Query())->from('source_site')->where(['ss_id' => $this->ss_id])->one();
@@ -83,17 +84,24 @@ class ParsModel extends Model
 
             $this->fetch_source_page(); // сдвигаем указатель на страницу
 
-            while  ($this->sp_id!=0)
+            while  ($this->sp_id!=0) 
             { 
-                if ($this->get_page() == 'continue') continue; // вытягиваем страницу для анализа 
+                if ($this->get_page() == 'continue'){
+                    $this->fetch_source_page(); // сдвигаем указатель на страницу
+                    continue; // вытягиваем страницу для анализа   
+                } 
+                
+$this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
                 
                 if ($this->cb_type_source_page == '1' and empty($this->sp_dp_id)) 
                 { 
+                 //$this->addlog(" choose_pattern() ID : ".$this->sp_id);
                     $this->choose_pattern(); // типизирует
                 }
-
+ 
                 if (($this->cb_find_internal_url == 1) and ($this->rb_url_source == 'rb_seek_url_onsite'))
                 {   
+                    $this->add_trace('4. main_pars_f.Seek_url  ID : '.$this->sp_id.'   URL : '.$this->sp_url);
                     $this->seek_urls();  // гребет ссылки на текущей странице
                 }
 
@@ -151,6 +159,8 @@ class ParsModel extends Model
             $this->sp_url = $row['sp_url'];  // текущий URL
             $this->sp_dp_id = $row['sp_dp_id'];
 
+            $this->add_trace('1. FETCH ID : '.$this->sp_id.'   URL : '.$this->sp_url);
+
             ++ $this->counter_steps;
 
         } else {  // разбор окончен, больше страниц нет
@@ -171,18 +181,27 @@ class ParsModel extends Model
         @$current_page_DOM->loadHTML('<meta http-equiv="content-type" content="text/html; charset=utf-8">' . $this->current_page_body); 
         $this->current_page_xpath = new \DomXPath($current_page_DOM);
 
+//$this->add_trace('2. main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url );
         // если ответ в заголовке не 200 ОК значит страница с ошибкой  
        
         If (strpos($this->HTTP_status, '200') === false){
           $this->mark_error_sp($this->HTTP_status);
           $res = 'continue';
+
+//$this->add_trace('2.1 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url );
+
+
         } else {
           ++ $this->counter_dl_pages;  
+
+//$this->add_trace('2.2 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url );
         };
 
       } catch (yii\base\ErrorException $e) {
           $this->mark_error_sp($e);
           $res = 'continue';
+//$this->add_trace('2.3 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url );
+
       };
      
       return $res;
@@ -193,13 +212,22 @@ class ParsModel extends Model
     //*************************************************************************************
     function seek_urls()
     {
-        $nodes = $this->current_page_xpath->query('.//a/@href');
+        $this->add_trace('seek_urls() SP_ID : '.$this->sp_id);
+
+        $nodes = $this->current_page_xpath->query('//a/@href');
+
+
+        
         foreach ($nodes as $node) 
         {
+        
+//$this->add_trace('seek_urls 1 ID : '.$this->sp_id.' NODE : '.$node->nodeValue );
+            
+
             $res_url = trim($node->nodeValue);
             $res_arr = $this->adjust_URL($res_url); // дописываем домен
             $res_url = $res_arr[0];
-          
+//$this->add_trace('seek_urls 2 ID : '.$this->sp_id.' res_url : '.$res_url);          
             // если мы сюда дошли, значит есть ссылка для сохранения
             if (!empty($res_url))
             {
@@ -253,6 +281,8 @@ class ParsModel extends Model
 
       foreach ($row as $pars_cond) 
       {
+       
+
         if (empty($pars_cond['pr_selector'])) continue;
         
 
@@ -278,11 +308,15 @@ class ParsModel extends Model
             ++ $counter_vin;            
         };    
 
-          $prev_dp_id = $pars_cond['dp_id'];
+        
+        $prev_dp_id = $pars_cond['dp_id'];
       };
+
+
 
       if ($counter_vin == $counter_cond)
       {
+
             // сохраняем результат в базу
             Yii::$app->db->createCommand()
                          ->update('source_page', 
@@ -292,10 +326,9 @@ class ParsModel extends Model
             ++ $this->counter_type_pages;
           
             $this->sp_dp_id = $prev_dp_id;
-          
+            //var_dump($this->sp_url);
+        //var_dump($prev_dp_id);die;
         }
-
-
     }
 
 
@@ -469,7 +502,10 @@ class ParsModel extends Model
         };
 
 
-        If ($res_nodes === false) { $this->addlog(" 0 get_query Xpath Ошибка построения query"); return; }
+        If ($res_nodes === false) { 
+            $this->add_trace("0 get_query Xpath Ошибка построения query");      
+            return; 
+        }
 
  //$this->addlog(" 1 get_query Xpath pr_id =".$selector['pr_id']. '' . $selector['pr_selector']);
 
@@ -560,18 +596,22 @@ class ParsModel extends Model
     */
     function adjust_URL($source_url) 
     {
-
+      
       $res_url = trim($source_url);
       $page_type = 'html';
+
+//$this->add_trace('adjust_URL 1 ID : '.$this->sp_id.' res_url : '.$res_url);      
 
       // 1. Определяем тип страницы 
       $exts = array('.jpg','.png', '.gif', 'webp', '.svg'); 
       if (in_array(strtolower(substr($res_url,-4,4)), $exts))
       {
         $page_type = 'img';
+//$this->add_trace('adjust_URL 2.1 ID : '.$this->sp_id.' res_url : '.$res_url);           
       } 
       elseif (( substr($res_url,0,1) == '#') or (empty($res_url)))
       {
+//$this->add_trace('adjust_URL 2.2 ID : '.$this->sp_id.' res_url : '.$res_url);           
         $res_url = ''; 
         $page_type = 'other';
       };
@@ -580,14 +620,19 @@ class ParsModel extends Model
       // 2. Нужно ли дописывать домен
       if (substr($res_url,0,2) == '//')
       {
+//$this->add_trace('adjust_URL 3.1 ID : '.$this->sp_id.' res_url : '.$res_url);           
         // $res_url = $source_url;
 
       } elseif (substr($res_url,0,1) == '/') // дописываем домен
       {
         $res_url = $this->ss_url.$res_url;
+
+//$this->add_trace('adjust_URL 3.2 ID : '.$this->sp_id.' res_url : '.$res_url);                   
+
       } elseif (substr($res_url,0,4) != 'http') // начинается с непонятно чего даже без слеша
       {
         $res_url = $this->ss_url.'/'.$res_url;
+//$this->add_trace('adjust_URL 3.2 ID : '.$this->sp_id.' res_url : '.$res_url);                   
       }
       elseif (substr($res_url,0,strlen($this->ss_url)) != $this->ss_url) // если внешняя ссылка
       {
@@ -625,4 +670,20 @@ class ParsModel extends Model
 
       };  
     }
+/*****************************************************/
+// очистка трейсау t_trace
+    function clear_trace(){
+        Yii::$app->db->createCommand('Delete from t_trace')
+            ->execute();
+     }
+
+    // пишет сообщение в трейс таблицу t_trace
+    function add_trace($trace_text){
+        Yii::$app->db->createCommand()
+            ->insert('t_trace', 
+                     ["trace_comment" => $trace_text,]) 
+            ->execute();
+     }
+
+
 }

@@ -35,3 +35,5 @@ tests/_support/_generated
 .parsdata
 .source_page
 .logs
+/config/db.php
+.config/db.php
