@@ -49,16 +49,20 @@ $this->params['breadcrumbs'][] = $this->title;
                 <?= $form->field($model, 'ss_id')->hiddenInput(['id'=> "ss_id"])->label(false); ?>
                 <?= $form->field($model, 'ss_url')->hiddenInput(['id'=> "ss_url"])->label(false); ?>
 
-                <?php $model->rb_url_source = 'rb_seek_url_onsite'; ?>
-                    <?= $form2->field($model, 'rb_url_source')->radioList([
-                        'rb_seek_url_onsite' => 'Искать ссылки на сайте',
-                        'rb_seek_url_sitemap' => 'Загрузить sitemap.xml',
-                    ])->label('Источник для поиска внутренних ссылок'); ?>
-            
-                 <?=  $form2->field($model, 'cb_find_internal_url')->checkbox(['label' => 'найти все внутренние ссылки на сайте', 'labelOptions' => [
+                <?=  $form2->field($model, 'cb_find_internal_url')->checkbox(['label' => 'Сформировать список ссылок из источника:', 'labelOptions' => [
                         'style' => 'padding-left:20px;' ],
                         'disabled' => false,
                     ]); ?>
+
+                <?php $model->rb_url_source = 'rb_seek_url_onsite'; ?>
+                    <?= $form2->field($model, 'rb_url_source')
+                        ->radioList([
+                            'rb_seek_url_onsite' => 'Искать ссылки на сайте',
+                            'rb_seek_url_sitemap' => 'Загрузить sitemap.xml',
+                            'rb_seek_url_price' => 'Дополнить по прайсу', ],
+                            ['class'=>'c_sourcesite_rb'])
+                        ->label(''); ?>
+            
 
 
                     <?= $form2->field($model, 'cb_download_page')->checkbox(['label' => 'сохранить в файл первую не типизированную страницу', 'labelOptions' => [

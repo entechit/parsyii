@@ -43,7 +43,7 @@ class ParsModel extends Model
         $this->parslog = '';
         $this->ri_img_path = '../parsdata/';
         $this->ri_src_path = '../source_page/';
-        $this->is_proxy = true;
+        $this->is_proxy = false;
 
         $this->counter_dl_img = 0;      // количество скачаных картинок
         $this->counter_dl_pages = 0;    // количество скачаных страниц
@@ -73,6 +73,26 @@ class ParsModel extends Model
         $this->cb_pars_source_page  = $ss_params["cb_pars_source_page"];  // необходимо выдрать все известные теги
         $this->cb_download_img      = $ss_params["cb_download_img"];      // скачать картинки
     
+        /* 
+          если загружаем по прайсу, то изначально формируем ссылки на страницы с условием поиска, 
+          а только потом из них выгребаем ссылки на карточки, которые нужно будет слинковать с пунктами прайса
+        */
+        if (($this->cb_find_internal_url == 1) and ($this->rb_url_source == 'rb_seek_url_price')){
+          // делаем в другом модуле чтобы не перегружать
+          // 1. Крутим цикл по прайсу
+
+          // 1.1. На каждой позиции прайса строим страницу поиска и запихиваем ее в Source_page
+
+          // 1.2. в результате поиска крутим цикл по страницам (пейджер)
+          // 1.2.1. Выбираем нулевую страницу
+          // 1.2.2. Выгребаем через настроенный селектор CMS ссылки на карточки
+          // 1.2.3. Добавлем ссылки в Source_page
+          // 1.2.4. Добавляем связку в таблицу link_price_source_page
+          // 1.2.5.           
+          // дальше наш обычный парсинг
+        }
+
+
         // если нужно чета делать кроме как загрузить уже найденные ссылки
         if (($this->cb_pars_source_page == 1) or 
             ($this->cb_type_source_page == 1) or 

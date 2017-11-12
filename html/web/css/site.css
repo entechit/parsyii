@@ -119,3 +119,11 @@ a.desc:after {
 .ss_grid_hover:hover{
     background-color: grey !important;
 }
+
+.c_sourcesite_rb{
+    margin-left: 15px;
+}
+
+.field-sourcesiteform-rb_url_source>.control-label{
+    display: none;
+}
