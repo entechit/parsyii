@@ -13,6 +13,7 @@ class ParsModel extends Model
     public $parslog;      // текстовое представление результатов парсинга
   
     public $ss_id;        // id задания из таблицы SourceSite
+    public $cust_id;        // id клиента
     public $ss_url;
     public $current_page_body;  // здесь сидит текст анализируемой страницы
     public $current_page_xpath; // структура узлов
@@ -43,7 +44,7 @@ class ParsModel extends Model
         $this->parslog = '';
         $this->ri_img_path = '../parsdata/';
         $this->ri_src_path = '../source_page/';
-        $this->is_proxy = false;
+        $this->is_proxy = true;
 
         $this->counter_dl_img = 0;      // количество скачаных картинок
         $this->counter_dl_pages = 0;    // количество скачаных страниц
@@ -65,6 +66,7 @@ class ParsModel extends Model
        
         $this->ss_url = $row_ss['ss_url'];  
         $this->dc_id  = $row_ss['ss_dc_id'];  
+        $this->cust_id  = $row_ss['ss_cust_id'];  
 
         $this->cb_find_internal_url = $ss_params["cb_find_internal_url"]; // парсинг страниц для поиска ссылок
         $this->rb_url_source        = $ss_params["rb_url_source"];        // откуда брать источник для парсинга.   
@@ -78,18 +80,9 @@ class ParsModel extends Model
           а только потом из них выгребаем ссылки на карточки, которые нужно будет слинковать с пунктами прайса
         */
         if (($this->cb_find_internal_url == 1) and ($this->rb_url_source == 'rb_seek_url_price')){
-          // делаем в другом модуле чтобы не перегружать
-          // 1. Крутим цикл по прайсу
-
-          // 1.1. На каждой позиции прайса строим страницу поиска и запихиваем ее в Source_page
-
-          // 1.2. в результате поиска крутим цикл по страницам (пейджер)
-          // 1.2.1. Выбираем нулевую страницу
-          // 1.2.2. Выгребаем через настроенный селектор CMS ссылки на карточки
-          // 1.2.3. Добавлем ссылки в Source_page
-          // 1.2.4. Добавляем связку в таблицу link_price_source_page
-          // 1.2.5.           
-          // дальше наш обычный парсинг
+            // делаем в другом модуле чтобы не перегружать
+         //   require "PriceSearchModel.php";
+         
         }
 
 
