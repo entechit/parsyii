@@ -38,6 +38,11 @@ class ParsModel extends Model
     public $cb_pars_source_page;  // выполнить парсинг
     public $cb_download_img;      // скачать картинки
 
+    public $mode_get_node; // режим в котором работает функция get_node()  'result' / 'urls'
+
+    public $pr_parentchild;  // признак того, что селектор описывает родительский (один на всю страницй) или дочерний набор
+    public $parentchild_series; // счетчик № набора в квери 
+
     // Формируем переменную коннекта к базе данных
     function __construct(){
         $this->sp_id = -1;
@@ -51,6 +56,13 @@ class ParsModel extends Model
         $this->counter_add_pages = 0;   // количество добавленных в набор страниц
         $this->counter_type_pages = 0;  // количество типизированных страниц
         $this->counter_steps = 0;       // сделано шагов по справочнику страниц
+
+        $this->mode_get_node = '';
+
+        $this->pr_parentchild = '';
+        $this->parentchild_series = 0;
+
+
     }
 
     //*************************************************************
@@ -81,10 +93,13 @@ class ParsModel extends Model
         */
         if (($this->cb_find_internal_url == 1) and ($this->rb_url_source == 'rb_seek_url_price')){
             // делаем в другом модуле чтобы не перегружать
+
+          $this->mode_get_node = 'urls';
          //   require "PriceSearchModel.php";
          
         }
 
+        $this->mode_get_node = 'result';
 
         // если нужно чета делать кроме как загрузить уже найденные ссылки
         if (($this->cb_pars_source_page == 1) or 
@@ -142,6 +157,10 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
         };
 
         // выводим на экран статистику
+
+        $this->addlog("Обработано строчек прайса: ".$this->counter_made_price_row); 
+        $this->addlog("Найдено страниц описания к прайсу: ".$this->counter_add_price_pages); 
+        
         $this->addlog("Выполнено шагов по страницам: ".$this->counter_steps); 
         $this->addlog("Скачано страниц: ".      $this->counter_dl_pages); 
         $this->addlog("Типизировано страниц: ". $this->counter_type_pages); 
@@ -492,6 +511,8 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
 
       foreach ($rules_rows_parent->each() as $rules_row_parent) 
       {    
+        $this->pr_parentchild = $rules_row_parent['pr_parentchild'];
+
         if ($rules_row_parent['pr_nodetype']=='q') // набор элементов
         {
           $this->get_query($this->current_page_xpath, $rules_row_parent);
@@ -509,9 +530,11 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
     {
 
         if ($context !== NULL) {
-          $res_nodes = $node->query($selector['pr_selector'], $context);  // ошибка  
+          if ($this->pr_parentchild == 'c') ++ $this->parentchild_series;
+          $res_nodes = $node->query($selector['pr_selector'], $context);    
         }else {
-          $res_nodes = $node->query($selector['pr_selector']);  // ошибка
+          $this->parentchild_series = 0;
+          $res_nodes = $node->query($selector['pr_selector']);
         };
 
 
@@ -524,7 +547,6 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
 
         foreach ($res_nodes as $res_node) // идем внутри полученного набора элементов
         {
-
             $rules_rows_sub = (new \yii\db\Query())
                   ->select(['pars_rule.*', 'dir_tags.dt_rd_field', 'dir_tags.dt_is_img',])
                   ->from('pars_rule')
@@ -534,6 +556,8 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
                                ':pr_id'    => $selector['pr_id'],]);
 
           //  $this->addlog(" 2 get_query Xpath Мы вошли в набор!!! ");
+
+            if (($this->pr_parentchild == 'c') and  ($context == NULL)) ++ $this->parentchild_series;
 
             foreach ($rules_rows_sub->each() as $rules_row_sub) 
             {    
@@ -546,7 +570,6 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
                
                 } elseif ($rules_row_sub['pr_nodetype']=='n') 
                 {
-                     
                 //    $this->addlog(" 4 get_query N Xpath =".$rules_row_sub['pr_selector']."PR_ID = ".$rules_row_sub['pr_id']);
                     $this->get_node($this->current_page_xpath, $rules_row_sub, $res_node );
                 }
@@ -563,17 +586,32 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
         // var_dump($node);die;
 
 //var_dump($this->parslog);die;
+
+        // инциализация для получения параметров img
+        $alt = '';
+        $title = '';
+        
         if ($context !== NULL) {
-          $res_nodes = $node->query($selector['pr_selector'], $context);  // ошибка  
+          $res_nodes = $node->query($selector['pr_selector'], $context);   
         }else {
-          $res_nodes = $node->query($selector['pr_selector']);  // ошибка
+          $res_nodes = $node->query($selector['pr_selector']); 
         };
 
         if ( $res_nodes->length == 0) return;
+        
 
         foreach ($res_nodes as $res_node) {
           $val = trim($res_node->nodeValue);
         };
+
+        // если это картинка, то вынимаем параметры alt и title
+        if ($selector['dt_is_img']==1){
+          $res_nodes = $node->query('./parent::img/@alt', $context);
+          foreach ($res_nodes as $res_node) { $alt = trim($res_node->nodeValue); };
+
+          $res_nodes = $node->query('./parent::img/@title', $context);
+          foreach ($res_nodes as $res_node) { $title = trim($res_node->nodeValue); };
+        }
 
         if ($selector['dt_is_img']){
           $res_arr = $this->adjust_URL($val); // дописываем домен
@@ -582,25 +620,32 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
         
 
         if (!empty($val)){
-            Yii::$app->db->createCommand()
-                   ->insert('result_data', 
-                           ["rd_ss_id" => $this->ss_id,
-                           "rd_sp_id" =>  $this->sp_id,
-                           "rd_dt_id" => $selector['pr_dt_id'],
-                           $selector['dt_rd_field'] => $val,]) 
-                   ->execute();
+          if ($this->mode_get_node == 'result'){
+              Yii::$app->db->createCommand()
+                     ->insert('result_data', 
+                             ["rd_ss_id" => $this->ss_id,
+                             "rd_sp_id" =>  $this->sp_id,
+                             "rd_dt_id" => $selector['pr_dt_id'],
+                             $selector['dt_rd_field'] => $val,
+                             "rd_parentchild_seria"=> ($this->pr_parentchild == 'p':'0'?$this->parentchild_series),
+                             ]) 
+                    ->execute();
 
-            if ($selector['dt_is_img']==1)
-            {
-                Yii::$app->db->createCommand()
-                   ->insert('result_img', 
-                           ["ri_ss_id" => $this->ss_id,
-                           "ri_rd_id" =>  Yii::$app->db->getLastInsertID(),
-                           "ri_source_url" => $val,]) 
-                   ->execute();
-            };
+              if ($selector['dt_is_img']==1) {
+                  Yii::$app->db->createCommand()
+                     ->insert('result_img', 
+                             ["ri_ss_id" => $this->ss_id,
+                             "ri_rd_id" =>  Yii::$app->db->getLastInsertID(),
+                             "ri_alt" =>  substr($alt,0,200),
+                             "ri_title" =>  substr($title,0,200),
+                             "ri_source_url" => $val,]) 
+                    ->execute();
+              };
+
+          } elseif ($this->mode_get_node == 'result') {  // записываем ссылку к прайсу
+            $this->insert_price_ulr_list($val);
+          };
         };
-
     }
     //*********************************
     /*
