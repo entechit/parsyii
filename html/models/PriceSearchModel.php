@@ -31,13 +31,6 @@
 
 */
 
-    public $pager_page_n; // счетчик страниц в результате поиска
-    public $searchmask; // маска поисковой строки
-    public $price_id;  // текущее значение строки прайса
-
-    public $counter_made_price_row; // обработано строк прайса 
-    public $counter_add_price_pages; // найдено ссылок для строк прайса 
-
     // установка настроечных параметров на каталоги
     function price_settings(){
 

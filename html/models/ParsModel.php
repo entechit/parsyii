@@ -43,6 +43,15 @@ class ParsModel extends Model
     public $pr_parentchild;  // признак того, что селектор описывает родительский (один на всю страницй) или дочерний набор
     public $parentchild_series; // счетчик № набора в квери 
 
+
+    // переменные работы с прайсом
+    public $pager_page_n; // счетчик страниц в результате поиска
+    public $searchmask; // маска поисковой строки
+    public $price_id;  // текущее значение строки прайса
+
+    public $counter_made_price_row; // обработано строк прайса 
+    public $counter_add_price_pages; // найдено ссылок для строк прайса 
+
     // Формируем переменную коннекта к базе данных
     function __construct(){
         $this->sp_id = -1;
@@ -69,6 +78,8 @@ class ParsModel extends Model
     // основная управляющая функция
     // на входе анализирует ss_id - код сайта который парсим
     //*************************************************************
+    require "PriceSearchModel.php";
+
     function main_pars_f($ss_params)
     {
         $this->clear_trace();
@@ -95,7 +106,8 @@ class ParsModel extends Model
             // делаем в другом модуле чтобы не перегружать
 
           $this->mode_get_node = 'urls';
-         //   require "PriceSearchModel.php";
+          
+          $this->price_settings();
          
         }
 
@@ -522,6 +534,15 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
           $this->get_node($this->current_page_xpath, $rules_row_parent );
         }
       };
+
+        // если мы в режиме выемки данных, то помечаем страницу как просканированную
+        if ($this->mode_get_node == 'result'){
+              Yii::$app->db->createCommand()
+                         ->update('source_page', 
+                                ['sp_parsed' => '1',], 
+                                'sp_id = '.$this->sp_id) 
+                         ->execute();
+        };
     }
 
     //**********************************************
@@ -627,7 +648,7 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
                              "rd_sp_id" =>  $this->sp_id,
                              "rd_dt_id" => $selector['pr_dt_id'],
                              $selector['dt_rd_field'] => $val,
-                             "rd_parentchild_seria"=> ($this->pr_parentchild == 'p':'0'?$this->parentchild_series),
+                             "rd_parentchild_seria"=> ($this->pr_parentchild == 'p'?'0':$this->parentchild_series),
                              ]) 
                     ->execute();
 
@@ -642,7 +663,7 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
                     ->execute();
               };
 
-          } elseif ($this->mode_get_node == 'result') {  // записываем ссылку к прайсу
+          } elseif ($this->mode_get_node == 'url') {  // записываем ссылку к прайсу
             $this->insert_price_ulr_list($val);
           };
         };
