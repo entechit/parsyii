@@ -3,6 +3,7 @@ namespace app\models;
 use Yii;
 use yii\base\Model;
 use yii\data\SqlDataProvider;
+
 //************************************
 //  Базовый класс для парсинга сайтов.
 //************************************
@@ -58,7 +59,7 @@ class ParsModel extends Model
         $this->parslog = '';
         $this->ri_img_path = '../parsdata/';
         $this->ri_src_path = '../source_page/';
-        $this->is_proxy = true;
+        $this->is_proxy = false;
 
         $this->counter_dl_img = 0;      // количество скачаных картинок
         $this->counter_dl_pages = 0;    // количество скачаных страниц
@@ -78,7 +79,7 @@ class ParsModel extends Model
     // основная управляющая функция
     // на входе анализирует ss_id - код сайта который парсим
     //*************************************************************
-    require "PriceSearchModel.php";
+   // include "PriceSearchModel.php";
 
     function main_pars_f($ss_params)
     {
@@ -622,16 +623,27 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
         
 
         foreach ($res_nodes as $res_node) {
+          $node = $res_node;
           $val = trim($res_node->nodeValue);
         };
 
         // если это картинка, то вынимаем параметры alt и title
+
         if ($selector['dt_is_img']==1){
-          $res_nodes = $node->query('./parent::img/@alt', $context);
+
+          $full ='';
+
+//          $res_nodes = $node->query('./../parent::img/@alt', $node);
+ //         foreach ($res_nodes as $res_node) { $full = trim($res_node->nodeValue); };
+
+//$this->add_trace('Get Alt and Title: this->sp_id: '.$this->sp_id.' content : '.$full);   
+
+ /*         $res_nodes = $node->query('./parent::img/@alt', $context);
           foreach ($res_nodes as $res_node) { $alt = trim($res_node->nodeValue); };
 
           $res_nodes = $node->query('./parent::img/@title', $context);
           foreach ($res_nodes as $res_node) { $title = trim($res_node->nodeValue); };
+$this->add_trace('Get Alt and Title: this->sp_id: '.$this->sp_id.' IMG Alt : '.$alt . '  Title: '.$title);   */
         }
 
         if ($selector['dt_is_img']){
@@ -760,7 +772,7 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
     function add_trace($trace_text){
         Yii::$app->db->createCommand()
             ->insert('t_trace', 
-                     ["trace_comment" => $trace_text,]) 
+                     ["trace_comment" => Substr(iconv('UTF-8', 'windows-1251', $trace_text),0,400),]) 
             ->execute();
      }
 

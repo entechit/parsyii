@@ -1,4 +1,5 @@
 <?php
+    namespace app\models;
 /*
  
           // 1. Крутим цикл по прайсу
@@ -46,7 +47,7 @@
             $this->sp_dp_id = 16; // страница с результатами поиска на Hotline
             $this->pager_page_n = 0;
             $res = true;
-        }
+        };
 
         return $res;
     }
@@ -92,7 +93,7 @@
             $this->get_content();
 
             ++ $this->counter_made_price_row;
-        }
+        };
     }
 
 
