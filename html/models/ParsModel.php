@@ -59,7 +59,7 @@ class ParsModel extends Model
         $this->parslog = '';
         $this->ri_img_path = '../parsdata/';
         $this->ri_src_path = '../source_page/';
-        $this->is_proxy = false;
+        $this->is_proxy = true;
 
         $this->counter_dl_img = 0;      // количество скачаных картинок
         $this->counter_dl_pages = 0;    // количество скачаных страниц
@@ -550,10 +550,10 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
     // вынимает набор данных
     function get_query($node, $selector, $context = NULL)
     {
-
+        
         if ($context !== NULL) {
           if ($this->pr_parentchild == 'c') ++ $this->parentchild_series;
-          $res_nodes = $node->query($selector['pr_selector'], $context);    
+          $res_nodes = $node->query($selector['pr_selector'], $context);  
         }else {
           $this->parentchild_series = 0;
           $res_nodes = $node->query($selector['pr_selector']);
@@ -579,7 +579,9 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
 
           //  $this->addlog(" 2 get_query Xpath Мы вошли в набор!!! ");
 
-            if (($this->pr_parentchild == 'c') and  ($context == NULL)) ++ $this->parentchild_series;
+            if (($this->pr_parentchild == 'c') and ($context == NULL)) {
+              ++ $this->parentchild_series;  
+            }  
 
             foreach ($rules_rows_sub->each() as $rules_row_sub) 
             {    
@@ -621,30 +623,32 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
 
         if ( $res_nodes->length == 0) return;
         
-
+        $val = '1';
         foreach ($res_nodes as $res_node) {
-          $node = $res_node;
-          $val = trim($res_node->nodeValue);
+
+            if ($selector['dt_is_img']==1){
+                $res_srcS = $node->query('./@src', $res_node);  
+                $res_altS = $node->query('./@alt', $res_node);  
+                $res_titleS = $node->query('./@title', $res_node);  
+
+                foreach ($res_srcS as $res_src) {
+                    $val = $res_src->nodeValue;
+                };
+                foreach ($res_altS as $res_alt) {
+                    $alt = $res_alt->nodeValue;
+                };
+                foreach ($res_titleS as $res_title) {
+                    $title = $res_title->nodeValue;
+                };
+          
+//$this->add_trace('Get Alt and Title: this->sp_id: '.$this->sp_id.' content : '.$full);   
+            } else {
+                $node = $res_node;
+                $val = trim($res_node->nodeValue);
+            };
         };
 
         // если это картинка, то вынимаем параметры alt и title
-
-        if ($selector['dt_is_img']==1){
-
-          $full ='';
-
-//          $res_nodes = $node->query('./../parent::img/@alt', $node);
- //         foreach ($res_nodes as $res_node) { $full = trim($res_node->nodeValue); };
-
-//$this->add_trace('Get Alt and Title: this->sp_id: '.$this->sp_id.' content : '.$full);   
-
- /*         $res_nodes = $node->query('./parent::img/@alt', $context);
-          foreach ($res_nodes as $res_node) { $alt = trim($res_node->nodeValue); };
-
-          $res_nodes = $node->query('./parent::img/@title', $context);
-          foreach ($res_nodes as $res_node) { $title = trim($res_node->nodeValue); };
-$this->add_trace('Get Alt and Title: this->sp_id: '.$this->sp_id.' IMG Alt : '.$alt . '  Title: '.$title);   */
-        }
 
         if ($selector['dt_is_img']){
           $res_arr = $this->adjust_URL($val); // дописываем домен
