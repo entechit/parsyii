@@ -1,5 +1,5 @@
 <?php
-    namespace app\models;
+   // namespace app\models;
 /*
  
           // 1. Крутим цикл по прайсу
@@ -71,9 +71,12 @@
             ->orderBy(['price_id' => SORT_ASC])
             ->all();
 
+
         // цикл по прайсу
         foreach ($price_rows as $price_row) {
 
+
+$this->add_trace('PRICE Cust_id : '.$this->cust_id.'   Наименование : '.$price_row['price_modelname']);
             $this->price_id = $price_row['price_id'];
 
            // формируем ссылку поиска
@@ -133,5 +136,4 @@
         $res = str_replace(' ', '+', $res);
         return $res;
     }
-
-}
+?>

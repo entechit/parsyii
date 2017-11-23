@@ -86,6 +86,12 @@ $this->params['breadcrumbs'][] = $this->title;
                         'disabled' => false,
                     ]); ?>
 
+                    <?= $form2->field($model, 'cb_export_data')->checkbox(['label' => 'Выгрузить собранные данные', 'labelOptions' => [
+                        'style' => 'padding-left:20px;' ],
+                        'disabled' => false,
+                    ]); ?>
+
+
                     <?= Html::submitButton('Выполнить анализ', ['class' => 'btn btn-primary', 'name' => 'source-site-action-button']); ?>
 
                     <?php ActiveForm::end(); ?>
