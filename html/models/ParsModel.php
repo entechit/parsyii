@@ -67,8 +67,8 @@ class ParsModel extends Model
         $this->ri_img_path = '../parsdata/';
         $this->ri_src_path = '../source_page/';
         $this->is_proxy = true;
-        $this->is_trace = false;
 
+        $this->is_trace = false;
         $this->counter_dl_img = 0;      // количество скачаных картинок
         $this->counter_dl_pages = 0;    // количество скачаных страниц
         $this->counter_add_pages = 0;   // количество добавленных в набор страниц
@@ -597,6 +597,7 @@ $this->add_trace('PRICE 5.2 Get_content() - Node ');
 
           //  $this->addlog(" 2 get_query Xpath Мы вошли в набор!!! ");
 
+
 $this->add_trace('PRICE 5.2.1 Get_query() - Query selector[pr_selector]'.$selector['pr_selector']);
 
             if (($this->pr_parentchild == 'c') and ($context == NULL)) {
@@ -653,6 +654,7 @@ $this->add_trace(" get_node 2 N Xpath =".$selector['pr_selector']);
                 $res_srcS = $node->query('./@src', $res_node);  
                 $res_altS = $node->query('./@alt', $res_node);  
                 $res_titleS = $node->query('./@title', $res_node);  
+
                 $res_hrefS = $node->query('./@href', $res_node);  
 
 
@@ -668,18 +670,16 @@ $this->add_trace(" get_node 2 N Xpath =".$selector['pr_selector']);
 //$this->add_trace('Get Alt and Title: this->sp_id: '.$this->sp_id.' content : '.$full);   
             } else {
                 $node = $res_node;
+
                 If ($selector['pr_html']=='1'){
-                  //  var_dump($res_nodes);
-                  //  var_dump($res_node);die;
                   $val = $this->getDomElementInnerHtml($res_node);
                 } else {
                     $val = trim($res_node->nodeValue);
                 }
-                    
+                   
 
 $this->add_trace(" get_node 3 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node);        
             };
-
 
         // если это картинка, то вынимаем параметры alt и title
 
