@@ -402,13 +402,13 @@ $this->add_trace('2.1 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->
             $opts = array( 
                 'http' => array ( 
                     'method'=>'GET', 
-                    'proxy'=>'entecheco.com:3128', 
+                    'proxy'=>'proxy.home.entecheco.com:3128', 
                     'request_fulluri' => true, 
                     'header'=> array("Proxy-Authorization: Basic $auth", "Authorization: Basic $auth") 
                 ), 
                 'https' => array ( 
                     'method'=>'GET', 
-                    'proxy'=>'entecheco.com:3128', 
+                    'proxy'=>'proxy.home.entecheco.com:3128', 
                     'request_fulluri' => true, 
                     'header'=> array("Proxy-Authorization: Basic $auth", "Authorization: Basic $auth") 
                 ),
@@ -533,7 +533,7 @@ $this->add_trace('2.1 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->
             ->select(['pars_rule.*', 'dir_tags.dt_rd_field', 'dir_tags.dt_is_img',])
             ->from('pars_rule')
             ->join('LEFT JOIN', 'dir_tags', 'pars_rule.pr_dt_id = dir_tags.dt_id')
-            ->where('pars_rule.pr_dp_id = :pr_dp_id and (pars_rule.pr_id_parent is null or pars_rule.pr_id_parent="")')
+            ->where('pars_rule.pr_dp_id = :pr_dp_id and (pars_rule.pr_id_parent is null or pars_rule.pr_id_parent="") and pars_rule.pr_dt_id <> 1')
             ->addParams([':pr_dp_id'=>$this->sp_dp_id]);
 
       foreach ($rules_rows_parent->each() as $rules_row_parent) 
@@ -591,7 +591,7 @@ $this->add_trace('PRICE 5.2 Get_content() - Node ');
                   ->select(['pars_rule.*', 'dir_tags.dt_rd_field', 'dir_tags.dt_is_img',])
                   ->from('pars_rule')
                   ->join('LEFT JOIN', 'dir_tags', 'pars_rule.pr_dt_id = dir_tags.dt_id')
-                  ->where('pars_rule.pr_dp_id = :pr_dp_id and pars_rule.pr_id_parent = :pr_id')
+                  ->where('pars_rule.pr_dp_id = :pr_dp_id and pars_rule.pr_id_parent = :pr_id and pars_rule.pr_dt_id <> 1')
                   ->addParams([':pr_dp_id' => $this->sp_dp_id,
                                ':pr_id'    => $selector['pr_id'],]);
 
@@ -643,8 +643,9 @@ $this->add_trace(" get_node 1 N Xpath =".$selector['pr_selector']);
 
         if ( $res_nodes->length == 0) return;
         
-        //$val = '1';
-        foreach ($res_nodes as $res_node) {
+        
+        $res_node = $res_nodes->Item(0);
+
 
 $this->add_trace(" get_node 2 N Xpath =".$selector['pr_selector']);        
 
@@ -654,30 +655,31 @@ $this->add_trace(" get_node 2 N Xpath =".$selector['pr_selector']);
                 $res_titleS = $node->query('./@title', $res_node);  
                 $res_hrefS = $node->query('./@href', $res_node);  
 
-                foreach ($res_srcS as $res_src) {
-                    $val = $res_src->nodeValue;
-                };
-                
-                foreach ($res_hrefS as $res_href) {
-                    $val = $res_href->nodeValue;
-                };
 
-                foreach ($res_altS as $res_alt) {
-                    $alt = $res_alt->nodeValue;
-                };
+                if ( $res_srcS->length > 0) $val = $res_srcS->Item(0)->nodeValue;
 
-                foreach ($res_titleS as $res_title) {
-                    $title = $res_title->nodeValue;
-                };
+                if ( $res_hrefS->length > 0) $val = $res_hrefS->Item(0)->nodeValue;
+
+                if ( $res_altS->length > 0)  $alt = $res_altS->Item(0)->nodeValue;
+
+                if ( $res_titleS->length > 0)  $title = $res_titleS->Item(0)->nodeValue;
+
           
 //$this->add_trace('Get Alt and Title: this->sp_id: '.$this->sp_id.' content : '.$full);   
             } else {
                 $node = $res_node;
-                $val = trim($res_node->nodeValue);
+                If ($selector['pr_html']=='1'){
+                  //  var_dump($res_nodes);
+                  //  var_dump($res_node);die;
+                  $val = $this->getDomElementInnerHtml($res_node);
+                } else {
+                    $val = trim($res_node->nodeValue);
+                }
+                    
 
 $this->add_trace(" get_node 3 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node);        
             };
-        };
+
 
         // если это картинка, то вынимаем параметры alt и title
 
@@ -819,6 +821,16 @@ $this->add_trace(" get_node 4.2 val =".$val  . 'MODE_GET_NODE = '.$this->mode_ge
             ->execute();
      }
 
+
+     // Получает на вход объект DOM, возвращает текст HTML
+    function getDomElementInnerHtml($element) { 
+
+        $newdoc = new \DOMDocument('1.0', 'UTF-8');
+        $cloned = $element->cloneNode(TRUE);
+        $newdoc->appendChild($newdoc->importNode($cloned,TRUE));
+        return $newdoc->saveHTML();
+
+    }
 
 /************************************************************************/
 // **********************  PRICE  ***************************************/
