@@ -180,7 +180,7 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
 
 
         if ($this->cb_export_data == '1') { // выгрузка данных
-            // export_data();
+            $this->export_main_f();
         }
 
         // выводим на экран статистику
@@ -980,4 +980,38 @@ $this->add_trace('PRICE 6.1 insert_price_ulr_list res_url = '.$res_url[0]);
         $res = str_replace(' ', '+', $res);
         return $res;
     }
+
+
+/********************************************************************/
+/********************   Экспорт в CSV   *****************************/
+/********************************************************************/
+    /*
+      Получаем выборку страниц для выборки 
+      Запускаем цикл для формирования заголовка CSV
+      Запускаем такой же цикл для формирования строки данных
+
+    */ 
+    function export_main_f(){
+
+        $exp_fields = (new \yii\db\Query())
+            ->select(['rd_sp_id'])
+            ->from('result_data rd')
+            ->where('rd.rd_ss_id = :rd_ss_id')
+            ->addParams([':rd_ss_id' => $this->ss_id,])
+            ->orderBy(['rd.rd_sp_id' => SORT_ASC])
+            ->all();
+
+    }
+
+    function exp_cycle(){
+
+        $exp_fields = (new \yii\db\Query())
+            ->select(['*'])
+            ->from('dir_tags_export dte')
+            ->where('dte.dte_cust_id = :dte_cust_id')
+            ->addParams([':dte_cust_id' => $this->cust_id,])
+            ->orderBy(['dte_id' => SORT_ASC])
+            ->all();
+    }
+
 }
