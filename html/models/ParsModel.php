@@ -645,7 +645,7 @@ $this->add_trace(" get_node 1 N Xpath =".$selector['pr_selector']);
         if ( $res_nodes->length == 0) return;
         
         
-        $res_node = $res_nodes->Item(0);
+        $res_node = $res_nodes->Item(0); 
 
 
 $this->add_trace(" get_node 2 N Xpath =".$selector['pr_selector']);        
@@ -823,12 +823,24 @@ $this->add_trace(" get_node 4.2 val =".$val  . 'MODE_GET_NODE = '.$this->mode_ge
 
 
      // Получает на вход объект DOM, возвращает текст HTML
-    function getDomElementInnerHtml($element) { 
+    function getDomElementInnerHtml_($element) { 
 
         $newdoc = new \DOMDocument('1.0', 'UTF-8');
         $cloned = $element->cloneNode(TRUE);
         $newdoc->appendChild($newdoc->importNode($cloned,TRUE));
         return $newdoc->saveHTML();
+
+    }
+
+    function getDomElementInnerHtml($element) { 
+            $innerHTML = ""; 
+            $children  = $element->childNodes;
+
+            foreach ($children as $child) { 
+                $innerHTML .= $element->ownerDocument->saveHTML($child);
+            }
+
+            return $innerHTML; 
 
     }
 
