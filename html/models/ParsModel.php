@@ -58,6 +58,8 @@ class ParsModel extends Model
     public $url_per_price; // Количество вариантов сохраняемых карточек, если найдено несколько ссылок
     public $url_per_price_counter; // счетчик ссылок на одну и туже позицию прайса
 
+    public $nodes_name_value; // массив в котором храним 3 значения: dt_id, dt_name, dt_value
+
 //require_once Yii::app()->basePath . '/models/PriceSearchModel.php';
 
     // Формируем переменную коннекта к базе данных
@@ -68,7 +70,7 @@ class ParsModel extends Model
         $this->ri_src_path = '../source_page/';
         $this->is_proxy = true;
 
-        $this->is_trace = false;
+        $this->is_trace = true;
         $this->counter_dl_img = 0;      // количество скачаных картинок
         $this->counter_dl_pages = 0;    // количество скачаных страниц
         $this->counter_add_pages = 0;   // количество добавленных в набор страниц
@@ -79,7 +81,7 @@ class ParsModel extends Model
 
         $this->pr_parentchild = '';
         $this->parentchild_series = 0;
-
+        $this->nodes_name_value =  array('dt_id'=>'','dt_name'=>'','rd_val'=>'', 'dt_rd_field'=>'');
 
     }
 
@@ -145,7 +147,6 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
                 
                 if ($this->cb_type_source_page == '1' and empty($this->sp_dp_id)) 
                 { 
-                 //$this->addlog(" choose_pattern() ID : ".$this->sp_id);
                     $this->choose_pattern(); // типизирует
                 }
  
@@ -240,7 +241,7 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
         @$current_page_DOM->loadHTML('<meta http-equiv="content-type" content="text/html; charset=utf-8">' . $this->current_page_body); 
         $this->current_page_xpath = new \DomXPath($current_page_DOM);
 
-//$this->add_trace('2. main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url );
+$this->add_trace('2. main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url );
         // если ответ в заголовке не 200 ОК значит страница с ошибкой  
        
         If (strpos($this->HTTP_status, '200') === false){
@@ -253,13 +254,13 @@ $this->add_trace('2.1 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->
         } else {
           ++ $this->counter_dl_pages;  
 
-//$this->add_trace('2.2 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url );
+$this->add_trace('2.2 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url );
         };
 
       } catch (yii\base\ErrorException $e) {
           $this->mark_error_sp($e);
           $res = 'continue';
-//$this->add_trace('2.3 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url );
+$this->add_trace('2.3 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url );
 
       };
      
@@ -318,14 +319,11 @@ $this->add_trace('2.1 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->
     ***************************************************************/
     function choose_pattern()
     {
-      //$this->addlog(" 0 EXECUTE choose_pattern()");
       $prev_dp_id = -1;
       $counter_cond = 0;
       $counter_vin = 0;
 
       if (!empty($this->sp_dp_id)) return; // если уже есть определение страницы - выходим
-
-      //$this->addlog(" 1 EXECUTE choose_pattern()");
 
       // Цикл по типизаторам текущего CMS
       $row = (new \yii\db\Query())
@@ -385,8 +383,6 @@ $this->add_trace('2.1 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->
             ++ $this->counter_type_pages;
           
             $this->sp_dp_id = $prev_dp_id;
-            //var_dump($this->sp_url);
-        //var_dump($prev_dp_id);die;
         }
     }
 
@@ -426,7 +422,6 @@ $this->add_trace('2.1 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->
             );
         }
 
-       // $this->addlog("Download Content file_get_contents_proxy(): ".$url);
         $ctx = stream_context_create($opts); 
 
        
@@ -450,7 +445,6 @@ $this->add_trace('2.1 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->
     function get_img()
     {
         if( !is_dir( $this->ri_img_path)){ 
-        //    $this->addlog("Создан новый каталог: ".$this->ri_img_path);
             mkdir( $this->ri_img_path, 0777, true );
         };
 
@@ -568,6 +562,8 @@ $this->add_trace('PRICE 5.2 Get_content() - Node ');
     // вынимает набор данных
     function get_query($node, $selector, $context = NULL)
     {
+
+        $this->nodes_name_value =  array('dt_id'=>'','dt_name'=>'','rd_val'=>'');
         
         if ($context !== NULL) {
           if ($this->pr_parentchild == 'c') ++ $this->parentchild_series;
@@ -583,19 +579,16 @@ $this->add_trace('PRICE 5.2 Get_content() - Node ');
             return; 
         }
 
- //$this->addlog(" 1 get_query Xpath pr_id =".$selector['pr_id']. '' . $selector['pr_selector']);
-
+ 
         foreach ($res_nodes as $res_node) // идем внутри полученного набора элементов
         {
             $rules_rows_sub = (new \yii\db\Query())
                   ->select(['pars_rule.*', 'dir_tags.dt_rd_field', 'dir_tags.dt_is_img',])
                   ->from('pars_rule')
                   ->join('LEFT JOIN', 'dir_tags', 'pars_rule.pr_dt_id = dir_tags.dt_id')
-                  ->where('pars_rule.pr_dp_id = :pr_dp_id and pars_rule.pr_id_parent = :pr_id and pars_rule.pr_dt_id <> 1')
+                  ->where('pars_rule.pr_dp_id = :pr_dp_id and pars_rule.pr_id_parent = :pr_id and (pars_rule.pr_dt_id <> 1 or pars_rule.pr_dt_id is null)')
                   ->addParams([':pr_dp_id' => $this->sp_dp_id,
                                ':pr_id'    => $selector['pr_id'],]);
-
-          //  $this->addlog(" 2 get_query Xpath Мы вошли в набор!!! ");
 
 
 $this->add_trace('PRICE 5.2.1 Get_query() - Query selector[pr_selector]'.$selector['pr_selector']);
@@ -606,11 +599,12 @@ $this->add_trace('PRICE 5.2.1 Get_query() - Query selector[pr_selector]'.$select
 
             foreach ($rules_rows_sub->each() as $rules_row_sub) 
             {    
-                 
+                 // всегда при следующем шаге внутри квери очищаем массив пары имя-значение
+              
+
                 if ($rules_row_sub['pr_nodetype']=='q')
                 {
 
-               //   $this->addlog(" 3 get_query Q Xpath =".$rules_row_sub['pr_selector']);
                   $this->get_query($this->current_page_xpath, $rules_row_sub,  $res_node );    
                
                 } elseif ($rules_row_sub['pr_nodetype']=='n') 
@@ -645,7 +639,7 @@ $this->add_trace(" get_node 1 N Xpath =".$selector['pr_selector']);
         if ( $res_nodes->length == 0) return;
         
         
-        $res_node = $res_nodes->Item(0);
+        $res_node = $res_nodes->Item(0); 
 
 
 $this->add_trace(" get_node 2 N Xpath =".$selector['pr_selector']);        
@@ -674,6 +668,12 @@ $this->add_trace(" get_node 2 N Xpath =".$selector['pr_selector']);
                 If ($selector['pr_html']=='1'){
                   $val = $this->getDomElementInnerHtml($res_node);
                 } else {
+                    if($selector['pr_name_value'] == 'n') {
+                        $child = $res_node->getElementsByTagName('div')->item(0);
+                        if ($child) {
+                          $res_node->removeChild($child);
+                        }
+                    }
                     $val = trim($res_node->nodeValue);
                 }
                    
@@ -693,6 +693,43 @@ $this->add_trace(" get_node 3 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_
 $this->add_trace(" get_node 4 val =".$val );
           if ($this->mode_get_node == 'result'){
 $this->add_trace(" get_node 4.1 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node);
+
+
+            // "обработка пары имя параметра - значение"
+            if (!empty($selector['pr_name_value'])){
+
+$this->add_trace(" get_node 4.1.0 pr_name_value =".$selector['pr_name_value']);
+
+                if($selector['pr_name_value'] == 'n'){
+$this->add_trace(" get_node 4.1.0.1 pr_name_value =".$selector['pr_name_value']);                    
+
+                     $this->nodes_name_value['dt_name'] = $val;
+                     $this->nodes_name_value['dt_id'] = $this->name_value_subst($val);
+
+$this->add_trace(" get_node 4.1.0.2 nodes_name_value[dt_id] =".$this->nodes_name_value['dt_id']);
+
+                } elseif ($selector['pr_name_value'] == 'v') {
+$this->add_trace(" get_node 4.1.0.3 pr_name_value =".$selector['pr_name_value']);                                        
+                     $this->nodes_name_value['rd_val'] = $val;
+                };
+
+                if ((!empty($this->nodes_name_value['dt_id']  )) and 
+                    (!empty($this->nodes_name_value['dt_name'])) and 
+                    (!empty($this->nodes_name_value['rd_val'] ))) {
+                        
+                        $selector['pr_dt_id'] = $this->nodes_name_value['dt_id'];
+                        $val = $this->nodes_name_value['rd_val'];
+$this->add_trace(" get_node 4.1.0.4 NO EXIT =".$this->nodes_name_value['dt_id']."---".$this->nodes_name_value['dt_name']. "---" . $this->nodes_name_value['rd_val']);
+
+                        $selector['dt_rd_field'] = $this->nodes_name_value['dt_rd_field'];
+
+                    } else {
+$this->add_trace(" get_node 4.1.0.5 EXIT =".$this->nodes_name_value['dt_id']."---".$this->nodes_name_value['dt_name']. "---" . $this->nodes_name_value['rd_val']);
+                        return;
+                    };
+            }
+            
+$this->add_trace(" get_node 4.1.1 dt_id =".$selector['pr_dt_id']);
               Yii::$app->db->createCommand()
                      ->insert('result_data', 
                              ["rd_ss_id" => $this->ss_id,
@@ -703,7 +740,7 @@ $this->add_trace(" get_node 4.1 val =".$val  . 'MODE_GET_NODE = '.$this->mode_ge
                              ]) 
                     ->execute();
 
-              if ($selector['dt_is_img']==1) {
+            if ($selector['dt_is_img']==1) {
                   Yii::$app->db->createCommand()
                      ->insert('result_img', 
                              ["ri_ss_id" => $this->ss_id,
@@ -712,7 +749,9 @@ $this->add_trace(" get_node 4.1 val =".$val  . 'MODE_GET_NODE = '.$this->mode_ge
                              "ri_title" =>  substr($title,0,200),
                              "ri_source_url" => $val,]) 
                     ->execute();
-              };
+            };
+
+            $this->nodes_name_value =  array('dt_id'=>'','dt_name'=>'','rd_val'=>'');
 
           } elseif ($this->mode_get_node == 'urls') {  // записываем ссылку к прайсу
 $this->add_trace(" get_node 4.2 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node);
@@ -823,12 +862,24 @@ $this->add_trace(" get_node 4.2 val =".$val  . 'MODE_GET_NODE = '.$this->mode_ge
 
 
      // Получает на вход объект DOM, возвращает текст HTML
-    function getDomElementInnerHtml($element) { 
+    function getDomElementInnerHtml_($element) { 
 
         $newdoc = new \DOMDocument('1.0', 'UTF-8');
         $cloned = $element->cloneNode(TRUE);
         $newdoc->appendChild($newdoc->importNode($cloned,TRUE));
         return $newdoc->saveHTML();
+
+    }
+
+    function getDomElementInnerHtml($element) { 
+            $innerHTML = ""; 
+            $children  = $element->childNodes;
+
+            foreach ($children as $child) { 
+                $innerHTML .= $element->ownerDocument->saveHTML($child);
+            }
+
+            return $innerHTML; 
 
     }
 
@@ -1012,6 +1063,50 @@ $this->add_trace('PRICE 6.1 insert_price_ulr_list res_url = '.$res_url[0]);
             ->addParams([':dte_cust_id' => $this->cust_id,])
             ->orderBy(['dte_id' => SORT_ASC])
             ->all();
+    }
+
+
+
+
+/*************************************************************************/
+/************ ФУНКЦИЯ ПОДМЕНЫ пары параметр - значение Тегами ************/
+/*************************************************************************/
+
+/*
+Принимаем на вход имя параметра, на выходе отдаем его ID в таблице dir_tags
+*/
+    function name_value_subst($parname){
+        
+        $res = null;
+        $this->nodes_name_value['dt_rd_field']= 'rd_short_data';
+        // заменяем двоеточие на пробел
+        $parname = str_ireplace(':', ' ', $parname);
+        $parname = trim(str_ireplace('  ', ' ', $parname));
+
+        $dt_vals = (new \yii\db\Query())
+            ->select(['dt_id'])
+            ->from('dir_tags')
+            ->where('LOWER(trim(dt_name)) = :dt_name')
+            ->addParams([':dt_name' => strtolower($parname),])
+            ->one();
+
+        if (!empty($dt_vals['dt_id'])){
+            //var_dump($dt_vals);die;
+            // возвращаем 
+            $res = $dt_vals['dt_id'];
+        } else {
+            // нужно добавлять и возвращать новый dt_id
+            Yii::$app->db->createCommand()
+                     ->insert('dir_tags', 
+                             ["dt_name" => $parname,
+                             "dt_rd_field" => $this->nodes_name_value['dt_rd_field'],]) 
+                    ->execute();
+            $res = Yii::$app->db->getLastInsertID();
+        };
+
+
+
+        return $res;
     }
 
 }
