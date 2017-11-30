@@ -668,12 +668,12 @@ $this->add_trace(" get_node 2 N Xpath =".$selector['pr_selector']);
                 If ($selector['pr_html']=='1'){
                   $val = $this->getDomElementInnerHtml($res_node);
                 } else {
-                    if($selector['pr_name_value'] == 'n') {
+            /*      if($selector['pr_name_value'] == 'n') {
                         $child = $res_node->getElementsByTagName('div')->item(0);
                         if ($child) {
                           $res_node->removeChild($child);
                         }
-                    }
+                    }*/
                     $val = trim($res_node->nodeValue);
                 }
                    
@@ -1087,8 +1087,11 @@ $this->add_trace('PRICE 6.1 insert_price_ulr_list res_url = '.$res_url[0]);
             ->select(['dt_id'])
             ->from('dir_tags')
             ->where('LOWER(trim(dt_name)) = :dt_name')
-            ->addParams([':dt_name' => strtolower($parname),])
+            ->addParams([':dt_name' => mb_strtolower($parname,'utf8'),])
             ->one();
+
+$this->add_trace('Tab_analyse name_value_subst 1  LOW parname = '.mb_strtolower($parname,'utf8'));
+$this->add_trace('Tab_analyse name_value_subst 2  parname = '.$parname);
 
         if (!empty($dt_vals['dt_id'])){
             //var_dump($dt_vals);die;
