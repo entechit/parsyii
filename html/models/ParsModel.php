@@ -70,7 +70,7 @@ class ParsModel extends Model
         $this->ri_src_path = '../source_page/';
         $this->is_proxy = true;
 
-        $this->is_trace = true;
+        $this->is_trace = false;
         $this->counter_dl_img = 0;      // количество скачаных картинок
         $this->counter_dl_pages = 0;    // количество скачаных страниц
         $this->counter_add_pages = 0;   // количество добавленных в набор страниц
@@ -325,8 +325,28 @@ $this->add_trace('2.3 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->
 
       if (!empty($this->sp_dp_id)) return; // если уже есть определение страницы - выходим
 
+
+
       // Цикл по типизаторам текущего CMS
-      $row = (new \yii\db\Query())
+
+
+      $row = Yii::$app->db->createCommand('SELECT pars_rule.pr_selector, pr_count_sub.pr_dp_id dp_id, pr_count_sub.pr_count
+            from  
+            (select count(pars_rule.pr_id) pr_count, pars_rule.pr_dp_id 
+            from pars_rule 
+            LEFT JOIN  dir_page_cms on pars_rule.pr_dp_id = dir_page_cms.dp_id
+            where dir_page_cms.dp_dc_id = :dp_dc_id and pars_rule.pr_dt_id = 1
+            group by pars_rule.pr_dp_id
+            ) pr_count_sub
+            LEFT JOIN  pars_rule on pars_rule.pr_dp_id = pr_count_sub.pr_dp_id
+            where pars_rule.pr_dt_id = 1
+            order by pr_count_sub.pr_count desc')
+           ->bindValue(':dp_dc_id',$this->dc_id)
+           ->queryAll();
+
+
+
+/*      $row = (new \yii\db\Query())
             ->select(['pars_rule.pr_selector', 'dir_page_cms.dp_id'])
             ->from('pars_rule')
             ->join('LEFT JOIN', 'dir_page_cms', 'pars_rule.pr_dp_id = dir_page_cms.dp_id')
@@ -334,7 +354,7 @@ $this->add_trace('2.3 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->
             ->orderBy(['dir_page_cms.dp_id' => SORT_ASC])
             ->addParams([':dp_dc_id' => $this->dc_id, ])
             ->all();
-
+*/
 
       foreach ($row as $pars_cond) 
       {
