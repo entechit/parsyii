@@ -68,7 +68,7 @@ class ParsModel extends Model
         $this->parslog = '';
         $this->ri_img_path = '../parsdata/';
         $this->ri_src_path = '../source_page/';
-        $this->is_proxy = true;
+        $this->is_proxy = false;
 
         $this->is_trace = false;
         $this->counter_dl_img = 0;      // количество скачаных картинок
@@ -1104,7 +1104,7 @@ $this->add_trace('PRICE 6.1 insert_price_ulr_list res_url = '.$res_url[0]);
         $parname = trim(str_ireplace('  ', ' ', $parname));
 
         $dt_vals = (new \yii\db\Query())
-            ->select(['dt_id'])
+            ->select(['dt_id', 'dt_rd_field',])
             ->from('dir_tags')
             ->where('LOWER(trim(dt_name)) = :dt_name')
             ->addParams([':dt_name' => mb_strtolower($parname,'utf8'),])
@@ -1117,6 +1117,7 @@ $this->add_trace('Tab_analyse name_value_subst 2  parname = '.$parname);
             //var_dump($dt_vals);die;
             // возвращаем 
             $res = $dt_vals['dt_id'];
+            $this->nodes_name_value['dt_rd_field'] = $dt_vals['dt_rd_field'];
         } else {
             // нужно добавлять и возвращать новый dt_id
             Yii::$app->db->createCommand()
