@@ -60,6 +60,12 @@ class ParsModel extends Model
 
     public $nodes_name_value; // массив в котором храним 3 значения: dt_id, dt_name, dt_value
 
+    // выгрузка в CSV
+    public $outputs_csv; // массив - основа для выгрузки в csv файл
+    public $outputs_csv_pattern; // шаблон строки массива с заполненными дефолтами
+    public $outputs_csv_index; // указатель на текущий формируемый элемент массива
+    public $result_csv_path;
+
 //require_once Yii::app()->basePath . '/models/PriceSearchModel.php';
 
     // Формируем переменную коннекта к базе данных
@@ -67,8 +73,9 @@ class ParsModel extends Model
         $this->sp_id = -1;
         $this->parslog = '';
         $this->ri_img_path = '../parsdata/';
+        $this->result_csv_path = '../parsdata/';
         $this->ri_src_path = '../source_page/';
-        $this->is_proxy = false;
+        $this->is_proxy = true;
 
         $this->is_trace = false;
         $this->counter_dl_img = 0;      // количество скачаных картинок
@@ -82,6 +89,10 @@ class ParsModel extends Model
         $this->pr_parentchild = '';
         $this->parentchild_series = 0;
         $this->nodes_name_value =  array('dt_id'=>'','dt_name'=>'','rd_val'=>'', 'dt_rd_field'=>'');
+
+        $this->outputs_csv = array();
+        $this->outputs_csv_pattern = array();
+        $this->outputs_csv_index = 0;
 
     }
 
@@ -344,17 +355,6 @@ $this->add_trace('2.3 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->
            ->bindValue(':dp_dc_id',$this->dc_id)
            ->queryAll();
 
-
-
-/*      $row = (new \yii\db\Query())
-            ->select(['pars_rule.pr_selector', 'dir_page_cms.dp_id'])
-            ->from('pars_rule')
-            ->join('LEFT JOIN', 'dir_page_cms', 'pars_rule.pr_dp_id = dir_page_cms.dp_id')
-            ->where('dir_page_cms.dp_dc_id = :dp_dc_id and pars_rule.pr_dt_id = 1') // 1 - это id тега   поля-типизатора
-            ->orderBy(['dir_page_cms.dp_id' => SORT_ASC])
-            ->addParams([':dp_dc_id' => $this->dc_id, ])
-            ->all();
-*/
 
       foreach ($row as $pars_cond) 
       {
@@ -1052,42 +1052,6 @@ $this->add_trace('PRICE 6.1 insert_price_ulr_list res_url = '.$res_url[0]);
         return $res;
     }
 
-
-/********************************************************************/
-/********************   Экспорт в CSV   *****************************/
-/********************************************************************/
-    /*
-      Получаем выборку страниц для выборки 
-      Запускаем цикл для формирования заголовка CSV
-      Запускаем такой же цикл для формирования строки данных
-
-    */ 
-    function export_main_f(){
-
-        $exp_fields = (new \yii\db\Query())
-            ->select(['rd_sp_id'])
-            ->from('result_data rd')
-            ->where('rd.rd_ss_id = :rd_ss_id')
-            ->addParams([':rd_ss_id' => $this->ss_id,])
-            ->orderBy(['rd.rd_sp_id' => SORT_ASC])
-            ->all();
-
-    }
-
-    function exp_cycle(){
-
-        $exp_fields = (new \yii\db\Query())
-            ->select(['*'])
-            ->from('dir_tags_export dte')
-            ->where('dte.dte_cust_id = :dte_cust_id')
-            ->addParams([':dte_cust_id' => $this->cust_id,])
-            ->orderBy(['dte_id' => SORT_ASC])
-            ->all();
-    }
-
-
-
-
 /*************************************************************************/
 /************ ФУНКЦИЯ ПОДМЕНЫ пары параметр - значение Тегами ************/
 /*************************************************************************/
@@ -1128,9 +1092,186 @@ $this->add_trace('Tab_analyse name_value_subst 2  parname = '.$parname);
             $res = Yii::$app->db->getLastInsertID();
         };
 
-
-
         return $res;
     }
 
+
+    /********************************************************************/
+    /********************   Экспорт в CSV   *****************************/
+    /********************************************************************/
+    /*
+      Получаем выборку страниц для выгрузки
+      Запускаем цикл для формирования заголовка CSV (distinct) в массив this->outputs_csv = array();
+      Запускаем такой же цикл для формирования строки данных - записываем значение через функцию.
+      текущий указатель на строку массива храним в outputs_csv_index 
+      Обработать дефолтные значения 
+    */ 
+
+
+    
+    function export_main_f()
+    {
+        $this->make_output_header();
+
+        $exp_source_page = (new \yii\db\Query())
+            ->select(['rd_sp_id', 'max(rd_parentchild_seria) sub_items'])
+            ->from('result_data rd')
+            ->where('rd.rd_ss_id = :rd_ss_id')
+            ->addParams([':rd_ss_id' => $this->ss_id,])
+            ->group('rd_sp_id')
+            ->orderBy(['rd.rd_sp_id' => SORT_ASC])
+            ->all();
+        
+        // идем по страницам источникам
+        foreach ($exp_source_page as $root_value) {
+
+            // внутри делаем выборку всех характеристик с одной страницы
+            $exp_parent_items = (new \yii\db\Query())
+                ->select(['*'])
+                ->from('result_data rd')
+                ->join('left join','result_img ri', 'rd.rd_id = ri.ri_rd_id')
+                ->join('left join','dir_tags dt', 'rd.rd_dt_id = dt.dt_id')
+                ->where('rd.rd_ss_id = :rd_ss_id and rd.rd_sp_id = :rd_sp_id and rd.rd_parentchild_seria = 0 ')
+                ->addParams([':rd_ss_id' => $this->ss_id,
+                             ':rd_sp_id' => $root_value['rd_sp_id'], ])
+                ->all();
+
+
+                // если серийных данных нет, только корневые 1:1
+            if ($root_value['sub_items']==0) continue;
+
+            if ($root_value['sub_items']==1) {  // есть только корневые 
+
+                $this->outputs_csv_pattern[$this->outputs_csv_index] = $this->outputs_csv_pattern;
+
+                foreach ( $exp_parent_items as $p_value) {
+
+                    if ($p_value['dt_is_img']=='1') // если изображение
+                    {
+                        $this->put_element_to_output($p_value['rd_dt_id'], $p_value['ri_img_path'].$value['ri_img_name']);
+                    } else {
+                        $this->put_element_to_output($p_value['rd_dt_id'], $p_value[$value['dt_rd_field']]);
+                    };
+                };
+                ++ $this->outputs_csv_index;
+
+            } else { // если и корневые и дочерние крутим цикл в цикле
+
+
+                for ($i = 1; $i <= $root_value['sub_items']-1; $i++){
+                    
+                    $this->outputs_csv_pattern[$this->outputs_csv_index] = $this->outputs_csv_pattern;
+                    /* BEGIN блок выгрузки нулевых значений*/
+                   reset($exp_parent_items);
+                   foreach ( $exp_parent_items as $p_value) {
+
+                        if ($exp_parent_items['dt_is_img']=='1') // если изображение
+                        {
+                            $this->put_element_to_output($p_value['rd_dt_id'], $p_value['ri_img_path'].$value['ri_img_name']);
+                        } else {
+                            $this->put_element_to_output($p_value['rd_dt_id'], $p_value[$value['dt_rd_field']]);
+                        };
+                    };  
+                    /* END блок выгрузки нулевых значений*/
+
+
+                    $exp_child_items = (new \yii\db\Query())
+                        ->select(['*'])
+                        ->from('result_data rd')
+                        ->join('left join','result_img ri', 'rd.rd_id = ri.ri_rd_id')
+                        ->join('left join','dir_tags dt', 'rd.rd_dt_id = dt.dt_id')
+                        ->where('rd.rd_ss_id = :rd_ss_id and rd.rd_sp_id = :rd_sp_id and rd_parentchild_seria=:rd_parentchild_seria')
+                        ->addParams([':rd_ss_id' => $this->ss_id,
+                                 ':rd_sp_id' => $value['rd_sp_id'], 
+                                 ':rd_parentchild_seria' => $i, 
+                             ])
+                        ->orderBy(['rd.rd_parentchild_seria' => SORT_ASC])
+                        ->all();
+
+                    foreach ( $exp_child_items as $c_value) {
+                        if ($c_value['dt_is_img']=='1') // если изображение
+                        {
+                            $this->put_element_to_output($c_value['rd_dt_id'], $p_value['ri_img_path'].$value['ri_img_name']);
+                        } else {
+                        $this->put_element_to_output($c_value['rd_dt_id'], $p_value[$value['dt_rd_field']]);
+                        };
+                    };
+
+                    ++ $this->outputs_csv_index;
+                }; /* end for*/
+
+         }
+
+        };
+
+        $this->exp_cycle();
+    }
+
+
+
+    // формируем заголовок массива выгрузки
+    function make_output_header(){
+        $exp_fields = (new \yii\db\Query())
+            ->selectDistinct(['ecf.ecf_field', 'ed.ed_value'])
+            ->from('export_cms_field ecf')
+            ->join('left join', 'export_defaults ed', 'ed.ed_ecf_id = ecf.ecf_id')
+            ->where('ecf.ecf_cust_id = :cust_id and ecf.ecf_ss_id = :ss_id')
+            ->addParams([':cust_id' => $this->cust_id,
+                         ':ss_id' => $this->ss_id,])
+            ->all();   
+            foreach ($exp_fields as $value) {
+                // Добавляем все поля в выходной массив 
+                $this->outputs_csv[$this->outputs_csv_index][] = $value['ecf_field'];
+                // шаблон строки выходного массива с дефолтами                
+                $this->outputs_csv_pattern[] = (!empty($value['ecf_value'])?$value['ed_value']:'');
+            };
+            ++ $this->outputs_csv_index;
+    }
+
+
+    // На вход id тега и значение - вносим значение в элемент массива
+    function put_element_to_output($tag_id, $val){
+
+        $res = null;
+        $exp_fields = (new \yii\db\Query())
+            ->select(['ecf.ecf_field', 'dt.dt_name'])
+            ->from('export_link_tag_field eltf')
+            ->join('left join', 'dir_tags dt', 'dt.dt_id = eltf.eltf_dt_id')
+            ->join('left join', 'export_cms_field ecf', 'ecf.ecf_id = eltf.eltf_ecf_id')
+            ->where('eltf.eltf_cust_id = :cust_id and eltf.eltf_dt_id = :dt_id and dt.dt_id is not null')
+            ->addParams([':cust_id' => $this->cust_id,
+                        ':dt_id' => $tag_id,])
+            ->one();   
+
+            if (empty($exp_fields['ecf_field'])) return;
+
+            $res = array_search($exp_fields['ecf_field'], $this->outputs_csv[0]);
+            
+            if (empty($res)) return;
+
+            // обрабатываем особые форматы
+            if (trim($exp_fields['ecf_field']) == 'Feature(Name:Value:Position)') //PrestaShop
+            {
+                $this->outputs_csv[$this->outputs_csv_index][$res] .= $exp_fields['dt_name'].':'.$val.':1'.',';
+            } else { // общий случай. Просто вносим значение без предобработки
+                $this->outputs_csv[$this->outputs_csv_index][$res] = $val;
+            };
+    }
+
+
+    // выгрузка результирующего массива в текстовый файл
+    function exp_cycle()
+    {
+        $n = count($this->outputs_csv_pattern);
+        foreach ( $this->outputs_csv as $key => $value) {
+            $res_str = '';
+            for ($i = 1; $i <= $n; $i++) {
+                $res_str .= '"'.$value.'"';
+                if ($i<= $n) $Res_str .= ",";
+            };
+            file_put_contents($this->$this->result_csv_path.$this->cust_id.'_'.$this->ss_id.'.csv', $res_str, FILE_APPEND);
+        };
+  
+        $this->addlog(" На диск сохранен файл:  ".$this->cust_id.'_'.$this->ss_id.'.csv');
+    }
 }
