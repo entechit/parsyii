@@ -39,6 +39,7 @@ AppAsset::register($this);
         'items' => [
             ['label' => 'Главная', 'url' => ['/site/index']],
             ['label' => 'Сайты для анализа', 'url' => ['/site/sourcesite']],
+            ['label' => 'Справочники', 'url' => ['/directories']],
             ['label' => 'Найденные страницы', 'url' => ['/site/pages']],
             ['label' => 'About', 'url' => ['/site/about']],
             ['label' => 'Contact', 'url' => ['/site/contact']],

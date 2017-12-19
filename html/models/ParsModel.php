@@ -26,6 +26,7 @@ class ParsModel extends Model
     public $ri_src_path;
     public $dc_id;        // код CMS 
     public $HTTP_status;  // статус ответа загружаемой страницы
+    public $sp_seek_urls;
 
     public $counter_dl_img;     // количество скачаных картинок
     public $counter_dl_pages;   // количество скачаных страниц
@@ -47,6 +48,7 @@ class ParsModel extends Model
     public $pr_parentchild;  // признак того, что селектор описывает родительский (один на всю страницй) или дочерний набор
     public $parentchild_series; // счетчик № набора в квери 
     public $is_trace;
+    public $trace_cats;  // категории трассировки
 
     // переменные работы с прайсом
     public $pager_page_n; // счетчик страниц в результате поиска
@@ -76,13 +78,17 @@ class ParsModel extends Model
     // Формируем переменную коннекта к базе данных
     function __construct(){
         $this->sp_id = -1;
+        $this->sp_seek_urls;
         $this->parslog = '';
         $this->ri_img_path = '../parsdata/';
         $this->result_csv_path = '../parsdata/';
         $this->ri_src_path = '../source_page/';
         $this->is_proxy = true;
 
-        $this->is_trace = true;
+        $this->is_trace = false;
+        $this->trace_cats = array('memory');  // memory - контроль памяти
+
+
         $this->counter_dl_img = 0;      // количество скачаных картинок
         $this->counter_dl_pages = 0;    // количество скачаных страниц
         $this->counter_add_pages = 0;   // количество добавленных в набор страниц
@@ -121,7 +127,7 @@ class ParsModel extends Model
         $this->cb_pars_source_page  = $ss_params["cb_pars_source_page"];  // необходимо выдрать все известные теги
         $this->cb_download_img      = $ss_params["cb_download_img"];      // скачать картинки
         
-        $this->cb_export_data      = $ss_params["cb_export_data"];      // скачать картинки
+        $this->cb_export_data      = $ss_params["cb_export_data"];      // экспортировать данные в формат заказчика
     
         /* 
           если загружаем по прайсу, то изначально формируем ссылки на страницы с условием поиска, 
@@ -161,13 +167,19 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
                 
                 if ($this->cb_type_source_page == '1' and empty($this->sp_dp_id)) 
                 { 
+                    $this->add_trace('mem_start choose_pattern() = '.memory_get_usage(), 'memory');
                     $this->choose_pattern(); // типизирует
+                    $this->add_trace('mem_end   choose_pattern() = '.memory_get_usage(), 'memory');
                 }
  
-                if (($this->cb_find_internal_url == 1) and ($this->rb_url_source == 'rb_seek_url_onsite'))
+                if (($this->cb_find_internal_url == 1) and ($this->rb_url_source == 'rb_seek_url_onsite')
+                    and $this->sp_seek_urls==0)
                 {   
                     $this->add_trace('4. main_pars_f.Seek_url  ID : '.$this->sp_id.'   URL : '.$this->sp_url);
+
+                    $this->add_trace('mem_start seek_urls() = '.memory_get_usage(), 'memory');
                     $this->seek_urls();  // гребет ссылки на текущей странице
+                    $this->add_trace('mem_end   seek_urls() = '.memory_get_usage(), 'memory');
                 }
 
                 if ($this->cb_pars_source_page == '1') 
@@ -220,7 +232,7 @@ $this->add_trace('EXPORT 0 ');
     function fetch_source_page()
     {
         $row = (new \yii\db\Query())
-            ->select(['sp_id', 'sp_url', 'sp_dp_id'])
+            ->select(['sp_id', 'sp_url', 'sp_dp_id', 'sp_seek_urls'])
             ->from('source_page')
             ->where('sp_ss_id = :sp_ss_id and sp_id>:sp_id and sp_parsed=0 and sp_errors is null')
             ->addParams([':sp_ss_id' => $this->ss_id, 
@@ -233,6 +245,8 @@ $this->add_trace('EXPORT 0 ');
             $this->sp_id = $row['sp_id'];  // ставим указатель на текущую страницу
             $this->sp_url = $row['sp_url'];  // текущий URL
             $this->sp_dp_id = $row['sp_dp_id'];
+            $this->sp_seek_urls = $row['sp_seek_urls'];
+
 
             $this->add_trace('1. FETCH ID : '.$this->sp_id.'   URL : '.$this->sp_url);
 
@@ -248,6 +262,21 @@ $this->add_trace('EXPORT 0 ');
     // № 1. загружает по ссылке страницу в переменную $current_page_body и созданный DOM объект в current_page_DOM
     function get_page()
     {
+
+    /* BEGIN блок условий, когда страницу качать не нужно*/
+
+    // если нужно только найти ссылки, а с это йстраницы уже ссылки выьраны - страницу не качаем
+    if ( ($this->cb_find_internal_url == 1)
+        and ($this->rb_url_source == 'rb_seek_url_onsite')
+        and ($this->sp_seek_urls==1)
+        and ($this->cb_type_source_page == 0)
+        and ($this->cb_download_page == 0)
+        and ($this->cb_pars_source_page == 0) ) {
+        return 'continue';
+    }
+    /* END блок условий, когда страницу качать не нужно*/
+
+
       $res = '';
       try {
         $this->current_page_body = $this->file_get_contents_proxy($this->sp_url); 
@@ -289,38 +318,58 @@ $this->add_trace('2.3 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->
     {
         $this->add_trace('seek_urls() SP_ID : '.$this->sp_id);
 
+$this->add_trace('mem_into 1 seek_urls() = '.memory_get_usage(), 'memory');        
+
         $nodes = $this->current_page_xpath->query('//a/@href');
 
+$this->add_trace('mem_into 2 seek_urls() = '.memory_get_usage(), 'memory');        
 
         
         foreach ($nodes as $node) 
         {
         
 //$this->add_trace('seek_urls 1 ID : '.$this->sp_id.' NODE : '.$node->nodeValue );
-            
+$this->add_trace('mem_into 3 seek_urls() = '.memory_get_usage(), 'memory');                    
 
             $res_url = trim($node->nodeValue);
+$this->add_trace('mem_into 4 seek_urls() = '.memory_get_usage(), 'memory');                    
             $res_arr = $this->adjust_URL($res_url); // дописываем домен
+$this->add_trace('mem_into 5 seek_urls() = '.memory_get_usage(), 'memory');                    
             $res_url = $res_arr[0];
+$this->add_trace('mem_into 6 seek_urls() = '.memory_get_usage(), 'memory');                                
 //$this->add_trace('seek_urls 2 ID : '.$this->sp_id.' res_url : '.$res_url);          
             // если мы сюда дошли, значит есть ссылка для сохранения
             if (!empty($res_url))
             {
+$this->add_trace('mem_into 7 seek_urls() = '.memory_get_usage(), 'memory');                                    
                 try {
                     Yii::$app->db->createCommand()
                              ->insert('source_page', 
                                 ["sp_ss_id" => $this->ss_id,
                                 "sp_url" => $res_url,]) 
                              ->execute();
-
+$this->add_trace('mem_into 8 seek_urls() = '.memory_get_usage(), 'memory');                    
                     ++ $this->counter_add_pages;
+$this->add_trace('mem_into 9 seek_urls() = '.memory_get_usage(), 'memory');                    
 
                 }  catch(\yii\db\Exception $e) {
-                    //
+$this->add_trace('mem_into 10 seek_urls() = '.memory_get_usage(), 'memory');                    
                 };
             };
         };
+$this->add_trace('mem_into 11 seek_urls() = '.memory_get_usage(), 'memory');                            
+        // помечаем, что из этой страницы уже выняты все ссылки
+          Yii::$app->db->createCommand()
+                         ->update('source_page', 
+                                ['sp_seek_urls' => '1',], 
+                                'sp_id = '.$this->sp_id) 
+                         ->execute();
+
+$this->add_trace('mem_into 12 seek_urls() = '.memory_get_usage(), 'memory');                    
     }
+
+
+
 
 
     //*****************************************************************
@@ -387,28 +436,29 @@ $this->add_trace('2.3 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->
         if ($this->current_page_xpath->evaluate($expression)) // если есть хоть одно совпадение
         { 
 
-if ($pars_cond['dp_id']=24){
-$this->add_trace('choose_pattern pr_id =  '.$pars_cond['pr_id']);    
-};            
+/*if ($pars_cond['dp_id']==27){
+$this->add_trace('choose_pattern dp_id = 27 pr_id =  '.$pars_cond['pr_id']);    
+};  
+if ($pars_cond['dp_id']==26){
+$this->add_trace('choose_pattern dp_id = 26  pr_id =  '.$pars_cond['pr_id']);    
+};*/          
             ++ $counter_vin;            
         };    
-
         
         $prev_dp_id = $pars_cond['dp_id'];
-      };
+    };
 
 
-
-      if ($counter_vin == $counter_cond)
-      {
+    if ($counter_vin == $counter_cond)
+    {
 
             // сохраняем результат в базу
-            Yii::$app->db->createCommand()
-                         ->update('source_page', 
-                                ['sp_dp_id' => $prev_dp_id,], 
-                                'sp_id = '.$this->sp_id) 
-                         ->execute();
-            ++ $this->counter_type_pages;
+        Yii::$app->db->createCommand()
+                     ->update('source_page', 
+                             ['sp_dp_id' => $prev_dp_id,], 
+                              'sp_id = '.$this->sp_id) 
+                     ->execute();
+        ++ $this->counter_type_pages;
           
             $this->sp_dp_id = $prev_dp_id;
         }
@@ -878,10 +928,14 @@ $this->add_trace(" get_node 4.2 val =".$val  . 'MODE_GET_NODE = '.$this->mode_ge
      }
 
     // пишет сообщение в трейс таблицу t_trace
-    function add_trace($trace_text){
+    function add_trace($trace_text, $cat = null){
+
 
         If (!$this->is_trace) return;
-        
+
+        // если не соотвествует категория трейса или не пусто
+        if (!((in_array($cat, $this->trace_cats)) or empty($cat))) return;
+
         Yii::$app->db->createCommand()
             ->insert('t_trace', 
                      ["trace_comment" => addslashes(Substr($trace_text,0,400)),]) 
@@ -889,6 +943,7 @@ $this->add_trace(" get_node 4.2 val =".$val  . 'MODE_GET_NODE = '.$this->mode_ge
      }
 
 
+     /****************************************************/
      // Получает на вход объект DOM, возвращает текст HTML
     function getDomElementInnerHtml_($element) { 
 
