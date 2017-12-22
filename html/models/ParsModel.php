@@ -69,6 +69,7 @@ class ParsModel extends Model
     public $outputs_csv_nparam; // количество выгружаемых параметров
     public $outputs_csv_file; // имя ипуть результирующего файла
 
+
     public $result_csv_path;
     public $ec_id;
 
@@ -85,8 +86,8 @@ class ParsModel extends Model
         $this->ri_src_path = '../source_page/';
         $this->is_proxy = true;
 
-        $this->is_trace = false;
-        $this->trace_cats = array('memory');  // memory - контроль памяти
+        $this->is_trace = true;
+        $this->trace_cats = array('value');  // memory - контроль памяти  value - контроль значений marker - показываем точку в программе
 
 
         $this->counter_dl_img = 0;      // количество скачаных картинок
@@ -111,7 +112,9 @@ class ParsModel extends Model
 
     function main_pars_f($ss_params)
     {
+
         $this->clear_trace();
+
         $this->ss_id = $ss_params["ss_id"];
 
         $row_ss = (new \yii\db\Query())->from('source_site')->where(['ss_id' => $this->ss_id])->one();
@@ -135,7 +138,7 @@ class ParsModel extends Model
         */
         if (($this->cb_find_internal_url == 1) and ($this->rb_url_source == 'rb_seek_url_price')){
             // делаем в другом модуле чтобы не перегружать
-$this->add_trace('PRICE !!!!!');
+$this->add_trace('PRICE !!!!!', 'marker', __FUNCTION__);
           $this->mode_get_node = 'urls';
           
           $this->price_main_f();
@@ -163,23 +166,23 @@ $this->add_trace('PRICE !!!!!');
                     continue; // вытягиваем страницу для анализа   
                 } 
                 
-$this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
+$this->add_trace('3. ID : '.$this->sp_id.'   URL : '.$this->sp_url, 'value', __FUNCTION__);
                 
                 if ($this->cb_type_source_page == '1' and empty($this->sp_dp_id)) 
                 { 
-                    $this->add_trace('mem_start choose_pattern() = '.memory_get_usage(), 'memory');
+//$this->add_trace('start choose_pattern() = '.memory_get_usage(), 'memory', __FUNCTION__);
                     $this->choose_pattern(); // типизирует
-                    $this->add_trace('mem_end   choose_pattern() = '.memory_get_usage(), 'memory');
+//$this->add_trace('end   choose_pattern() = '.memory_get_usage(), 'memory', __FUNCTION__);
                 }
  
                 if (($this->cb_find_internal_url == 1) and ($this->rb_url_source == 'rb_seek_url_onsite')
                     and $this->sp_seek_urls==0)
                 {   
-                    $this->add_trace('4. main_pars_f.Seek_url  ID : '.$this->sp_id.'   URL : '.$this->sp_url);
+$this->add_trace('4. Seek_url  ID : '.$this->sp_id.'   URL : '.$this->sp_url, 'value', __FUNCTION__);
 
-                    $this->add_trace('mem_start seek_urls() = '.memory_get_usage(), 'memory');
+$this->add_trace('start seek_urls() = '.memory_get_usage(), 'memory', __FUNCTION__);
                     $this->seek_urls();  // гребет ссылки на текущей странице
-                    $this->add_trace('mem_end   seek_urls() = '.memory_get_usage(), 'memory');
+$this->add_trace('end   seek_urls() = '.memory_get_usage(), 'memory', __FUNCTION__);
                 }
 
                 if ($this->cb_pars_source_page == '1') 
@@ -205,9 +208,9 @@ $this->add_trace('3. main_pars_f ID : '.$this->sp_id.'   URL : '.$this->sp_url);
             $this->get_img(); // скачивает картинки
         };
 
-$this->add_trace('EXPORT -1 this->cb_export_data = '.$this->cb_export_data);            
+$this->add_trace('EXPORT -1 this->cb_export_data = '.$this->cb_export_data, 'value', __FUNCTION__);            
         if ($this->cb_export_data == '1') { // выгрузка данных
-$this->add_trace('EXPORT 0 ');            
+$this->add_trace('EXPORT 0 ', 'marker', __FUNCTION__);            
             $this->export_main_f();
         }
 
@@ -248,7 +251,7 @@ $this->add_trace('EXPORT 0 ');
             $this->sp_seek_urls = $row['sp_seek_urls'];
 
 
-            $this->add_trace('1. FETCH ID : '.$this->sp_id.'   URL : '.$this->sp_url);
+$this->add_trace('1. ID : '.$this->sp_id.'   URL : '.$this->sp_url, 'value', __FUNCTION__);
 
             ++ $this->counter_steps;
 
@@ -285,26 +288,26 @@ $this->add_trace('EXPORT 0 ');
         @$current_page_DOM->loadHTML('<meta http-equiv="content-type" content="text/html; charset=utf-8">' . $this->current_page_body); 
         $this->current_page_xpath = new \DomXPath($current_page_DOM);
 
-$this->add_trace('2. main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url );
+$this->add_trace('2. ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url , 'value', __FUNCTION__);
         // если ответ в заголовке не 200 ОК значит страница с ошибкой  
        
         If (strpos($this->HTTP_status, '200') === false){
           $this->mark_error_sp($this->HTTP_status);
           $res = 'continue';
 
-$this->add_trace('2.1 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url );
+$this->add_trace('2.1 ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url, 'value', __FUNCTION__ );
 
 
         } else {
           ++ $this->counter_dl_pages;  
 
-$this->add_trace('2.2 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url );
+$this->add_trace('2.2 ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url, 'value', __FUNCTION__ );
         };
 
       } catch (yii\base\ErrorException $e) {
           $this->mark_error_sp($e);
           $res = 'continue';
-$this->add_trace('2.3 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url );
+$this->add_trace('2.3 ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url, 'value', __FUNCTION__ );
 
       };
      
@@ -316,48 +319,53 @@ $this->add_trace('2.3 main_pars_f ID : '.$this->sp_id.' HTTP-Status : '. $this->
     //*************************************************************************************
     function seek_urls()
     {
-        $this->add_trace('seek_urls() SP_ID : '.$this->sp_id);
+$this->add_trace('0 SP_ID : '.$this->sp_id, 'marker', __FUNCTION__);
 
-$this->add_trace('mem_into 1 seek_urls() = '.memory_get_usage(), 'memory');        
+$this->add_trace('1 = '.memory_get_usage(), 'memory', __FUNCTION__);        
 
         $nodes = $this->current_page_xpath->query('//a/@href');
 
-$this->add_trace('mem_into 2 seek_urls() = '.memory_get_usage(), 'memory');        
+$this->add_trace('2  = '.memory_get_usage(), 'memory', __FUNCTION__);        
 
         
         foreach ($nodes as $node) 
         {
         
 //$this->add_trace('seek_urls 1 ID : '.$this->sp_id.' NODE : '.$node->nodeValue );
-$this->add_trace('mem_into 3 seek_urls() = '.memory_get_usage(), 'memory');                    
+$this->add_trace('3 = '.memory_get_usage(), 'memory', __FUNCTION__);
 
             $res_url = trim($node->nodeValue);
-$this->add_trace('mem_into 4 seek_urls() = '.memory_get_usage(), 'memory');                    
+$this->add_trace('4 = '.memory_get_usage(), 'memory', __FUNCTION__);
             $res_arr = $this->adjust_URL($res_url); // дописываем домен
-$this->add_trace('mem_into 5 seek_urls() = '.memory_get_usage(), 'memory');                    
+$this->add_trace('5 = '.memory_get_usage(), 'memory', __FUNCTION__);
             $res_url = $res_arr[0];
-$this->add_trace('mem_into 6 seek_urls() = '.memory_get_usage(), 'memory');                                
+$this->add_trace('6 = '.memory_get_usage(), 'memory', __FUNCTION__);
 //$this->add_trace('seek_urls 2 ID : '.$this->sp_id.' res_url : '.$res_url);          
             // если мы сюда дошли, значит есть ссылка для сохранения
             if (!empty($res_url))
             {
-$this->add_trace('mem_into 7 seek_urls() = '.memory_get_usage(), 'memory');                                    
+$this->add_trace('7 = '.memory_get_usage(), 'memory', __FUNCTION__);
                 try {
                     Yii::$app->db->createCommand()
                              ->insert('source_page', 
                                 ["sp_ss_id" => $this->ss_id,
                                 "sp_url" => $res_url,]) 
                              ->execute();
-$this->add_trace('mem_into 8 seek_urls() = '.memory_get_usage(), 'memory');                    
+$this->add_trace('8 = '.memory_get_usage(), 'memory', __FUNCTION__);
                     ++ $this->counter_add_pages;
-$this->add_trace('mem_into 9 seek_urls() = '.memory_get_usage(), 'memory');                    
+$this->add_trace('9 = '.memory_get_usage(), 'memory', __FUNCTION__);                    
 
                 }  catch(\yii\db\Exception $e) {
-$this->add_trace('mem_into 10 seek_urls() = '.memory_get_usage(), 'memory');                    
+$this->add_trace('10 = '.memory_get_usage(), 'memory', __FUNCTION__);
                 };
             };
         };
-$this->add_trace('mem_into 11 seek_urls() = '.memory_get_usage(), 'memory');                            
+
+        /*$nodes=null;
+        unset($nodes);
+        $res_url = null;
+        unset($res_url);*/
+$this->add_trace('11 = '.memory_get_usage(), 'memory', __FUNCTION__);
         // помечаем, что из этой страницы уже выняты все ссылки
           Yii::$app->db->createCommand()
                          ->update('source_page', 
@@ -365,12 +373,8 @@ $this->add_trace('mem_into 11 seek_urls() = '.memory_get_usage(), 'memory');
                                 'sp_id = '.$this->sp_id) 
                          ->execute();
 
-$this->add_trace('mem_into 12 seek_urls() = '.memory_get_usage(), 'memory');                    
+$this->add_trace('12 = '.memory_get_usage(), 'memory', __FUNCTION__);
     }
-
-
-
-
 
     //*****************************************************************
     /* Типизирует страницу 
@@ -437,10 +441,10 @@ $this->add_trace('mem_into 12 seek_urls() = '.memory_get_usage(), 'memory');
         { 
 
 /*if ($pars_cond['dp_id']==27){
-$this->add_trace('choose_pattern dp_id = 27 pr_id =  '.$pars_cond['pr_id']);    
+$this->add_trace('choose_pattern dp_id = 27 pr_id =  '.$pars_cond['pr_id'],'value', __FUNCTION__);    
 };  
 if ($pars_cond['dp_id']==26){
-$this->add_trace('choose_pattern dp_id = 26  pr_id =  '.$pars_cond['pr_id']);    
+$this->add_trace('choose_pattern dp_id = 26  pr_id =  '.$pars_cond['pr_id'],'value', __FUNCTION__);    
 };*/          
             ++ $counter_vin;            
         };    
@@ -558,7 +562,6 @@ $this->add_trace('choose_pattern dp_id = 26  pr_id =  '.$pars_cond['pr_id']);
         }
     }
 
-
     //***************************************
     // формирует запись итогов работы парсера
     //***************************************
@@ -611,17 +614,17 @@ $this->add_trace('choose_pattern dp_id = 26  pr_id =  '.$pars_cond['pr_id']);
       foreach ($rules_rows_parent->each() as $rules_row_parent) 
       {    
 
-$this->add_trace('PRICE 5.1 Get_content() this->sp_url = '.$this->sp_url);                    
+$this->add_trace('1 this->sp_url = '.$this->sp_url,'marker', __FUNCTION__);
         $this->pr_parentchild = $rules_row_parent['pr_parentchild'];
 
         if ($rules_row_parent['pr_nodetype']=='q') // набор элементов
         {
-$this->add_trace('PRICE 5.2 Get_content() - Query ');                        
+$this->add_trace('2 Query ','marker', __FUNCTION__);
           $this->get_query($this->current_page_xpath, $rules_row_parent);
         } 
         elseif($rules_row_parent['pr_nodetype']=='n') // одиночный элемент
         { 
-$this->add_trace('PRICE 5.2 Get_content() - Node ');                        
+$this->add_trace('3 Node ','marker', __FUNCTION__);                        
           $this->get_node($this->current_page_xpath, $rules_row_parent );
         }
       };
@@ -653,7 +656,7 @@ $this->add_trace('PRICE 5.2 Get_content() - Node ');
 
 
         If ($res_nodes === false) { 
-            $this->add_trace("0 get_query Xpath Ошибка построения query");      
+$this->add_trace("0 get_query Xpath Ошибка построения query",'marker', __FUNCTION__);      
             return; 
         }
 
@@ -669,7 +672,7 @@ $this->add_trace('PRICE 5.2 Get_content() - Node ');
                                ':pr_id'    => $selector['pr_id'],]);
 
 
-$this->add_trace('PRICE 5.2.1 Get_query() - Query selector[pr_selector]'.$selector['pr_selector']);
+$this->add_trace('1 Query selector[pr_selector]'.$selector['pr_selector'],'value', __FUNCTION__);
 
             if (($this->pr_parentchild == 'c') and ($context == NULL)) {
               ++ $this->parentchild_series;  
@@ -687,7 +690,7 @@ $this->add_trace('PRICE 5.2.1 Get_query() - Query selector[pr_selector]'.$select
                
                 } elseif ($rules_row_sub['pr_nodetype']=='n') 
                 {
-$this->add_trace(" 4 get_query N Xpath =".$rules_row_sub['pr_selector']."PR_ID = ".$rules_row_sub['pr_id']);
+$this->add_trace(" 2 N Xpath =".$rules_row_sub['pr_selector']."PR_ID = ".$rules_row_sub['pr_id'],'marker', __FUNCTION__);
                     $this->get_node($this->current_page_xpath, $rules_row_sub, $res_node );
                 }
             }
@@ -707,7 +710,7 @@ $this->add_trace(" 4 get_query N Xpath =".$rules_row_sub['pr_selector']."PR_ID =
         // инциализация для получения параметров img
         $alt = '';
         $title = '';
-$this->add_trace(" get_node 1 N Xpath =".$selector['pr_selector']);        
+$this->add_trace("1 N Xpath =".$selector['pr_selector'],'value', __FUNCTION__);
         if ($context !== NULL) {
           $res_nodes = $node->query($selector['pr_selector'], $context);   
         }else {
@@ -720,7 +723,7 @@ $this->add_trace(" get_node 1 N Xpath =".$selector['pr_selector']);
         $res_node = $res_nodes->Item(0); 
 
 
-$this->add_trace(" get_node 2 N Xpath =".$selector['pr_selector']);        
+$this->add_trace("2 N Xpath =".$selector['pr_selector'],'value', __FUNCTION__);
 
             if ($selector['dt_is_img']==1){
                 $res_srcS = $node->query('./@src', $res_node);  
@@ -756,7 +759,7 @@ $this->add_trace(" get_node 2 N Xpath =".$selector['pr_selector']);
                 }
                    
 
-$this->add_trace(" get_node 3 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node);        
+$this->add_trace("3 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node,'value', __FUNCTION__);
             };
 
         // если это картинка, то вынимаем параметры alt и title
@@ -768,26 +771,25 @@ $this->add_trace(" get_node 3 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_
         
 
         if (!empty($val)){
-$this->add_trace(" get_node 4 val =".$val );
+$this->add_trace("4 val =".$val,'value', __FUNCTION__);
           if ($this->mode_get_node == 'result'){
-$this->add_trace(" get_node 4.1 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node);
-
+$this->add_trace("4.1 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node,'value', __FUNCTION__);
 
             // "обработка пары имя параметра - значение"
             if (!empty($selector['pr_name_value'])){
 
-$this->add_trace(" get_node 4.1.0 pr_name_value =".$selector['pr_name_value']);
+$this->add_trace("4.1.0 pr_name_value =".$selector['pr_name_value'],'value', __FUNCTION__);
 
                 if($selector['pr_name_value'] == 'n'){
-$this->add_trace(" get_node 4.1.0.1 pr_name_value =".$selector['pr_name_value']);                    
+$this->add_trace("4.1.0.1 pr_name_value =".$selector['pr_name_value'],'value', __FUNCTION__);
 
                      $this->nodes_name_value['dt_name'] = $val;
                      $this->nodes_name_value['dt_id'] = $this->name_value_subst($val);
 
-$this->add_trace(" get_node 4.1.0.2 nodes_name_value[dt_id] =".$this->nodes_name_value['dt_id']);
+$this->add_trace("4.1.0.2 nodes_name_value[dt_id] =".$this->nodes_name_value['dt_id'],'value', __FUNCTION__);
 
                 } elseif ($selector['pr_name_value'] == 'v') {
-$this->add_trace(" get_node 4.1.0.3 pr_name_value =".$selector['pr_name_value']);                                        
+$this->add_trace("4.1.0.3 pr_name_value =".$selector['pr_name_value'],'value', __FUNCTION__);
                      $this->nodes_name_value['rd_val'] = $val;
                 };
 
@@ -797,17 +799,17 @@ $this->add_trace(" get_node 4.1.0.3 pr_name_value =".$selector['pr_name_value'])
                         
                         $selector['pr_dt_id'] = $this->nodes_name_value['dt_id'];
                         $val = $this->nodes_name_value['rd_val'];
-$this->add_trace(" get_node 4.1.0.4 NO EXIT =".$this->nodes_name_value['dt_id']."---".$this->nodes_name_value['dt_name']. "---" . $this->nodes_name_value['rd_val']);
+$this->add_trace("4.1.0.4 NO EXIT =".$this->nodes_name_value['dt_id']."---".$this->nodes_name_value['dt_name']. "---" . $this->nodes_name_value['rd_val'],'value', __FUNCTION__);
 
                         $selector['dt_rd_field'] = $this->nodes_name_value['dt_rd_field'];
 
                     } else {
-$this->add_trace(" get_node 4.1.0.5 EXIT =".$this->nodes_name_value['dt_id']."---".$this->nodes_name_value['dt_name']. "---" . $this->nodes_name_value['rd_val']);
+$this->add_trace("4.1.0.5 EXIT =".$this->nodes_name_value['dt_id']."---".$this->nodes_name_value['dt_name']. "---" . $this->nodes_name_value['rd_val'],'value', __FUNCTION__);
                         return;
                     };
             }
             
-$this->add_trace(" get_node 4.1.1 dt_id =".$selector['pr_dt_id']);
+$this->add_trace("4.1.1 dt_id =".$selector['pr_dt_id'],'value', __FUNCTION__);
               Yii::$app->db->createCommand()
                      ->insert('result_data', 
                              ["rd_ss_id" => $this->ss_id,
@@ -832,7 +834,7 @@ $this->add_trace(" get_node 4.1.1 dt_id =".$selector['pr_dt_id']);
             $this->nodes_name_value =  array('dt_id'=>'','dt_name'=>'','rd_val'=>'');
 
           } elseif ($this->mode_get_node == 'urls') {  // записываем ссылку к прайсу
-$this->add_trace(" get_node 4.2 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node);
+$this->add_trace("4.2 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node,'value', __FUNCTION__);
             $this->insert_price_ulr_list($val);
           };
         };
@@ -848,18 +850,18 @@ $this->add_trace(" get_node 4.2 val =".$val  . 'MODE_GET_NODE = '.$this->mode_ge
       $res_url = trim($source_url);
       $page_type = 'html';
 
-//$this->add_trace('adjust_URL 1 ID : '.$this->sp_id.' res_url : '.$res_url);      
+$this->add_trace('1 ID : '.$this->sp_id.' res_url : '.$res_url,'value', __FUNCTION__);
 
       // 1. Определяем тип страницы 
       $exts = array('.jpg','.png', '.gif', 'webp', '.svg'); 
       if (in_array(strtolower(substr($res_url,-4,4)), $exts))
       {
         $page_type = 'img';
-//$this->add_trace('adjust_URL 2.1 ID : '.$this->sp_id.' res_url : '.$res_url);           
+$this->add_trace('2.1 ID : '.$this->sp_id.' res_url : '.$res_url,'value', __FUNCTION__);
       } 
       elseif (( substr($res_url,0,1) == '#') or (empty($res_url)))
       {
-//$this->add_trace('adjust_URL 2.2 ID : '.$this->sp_id.' res_url : '.$res_url);           
+$this->add_trace('2.2 ID : '.$this->sp_id.' res_url : '.$res_url,'value', __FUNCTION__);
         $res_url = ''; 
         $page_type = 'other';
       };
@@ -868,19 +870,19 @@ $this->add_trace(" get_node 4.2 val =".$val  . 'MODE_GET_NODE = '.$this->mode_ge
       // 2. Нужно ли дописывать домен
       if (substr($res_url,0,2) == '//')
       {
-//$this->add_trace('adjust_URL 3.1 ID : '.$this->sp_id.' res_url : '.$res_url);           
+$this->add_trace('3.1 ID : '.$this->sp_id.' res_url : '.$res_url,'value', __FUNCTION__);
         // $res_url = $source_url;
 
       } elseif (substr($res_url,0,1) == '/') // дописываем домен
       {
         $res_url = $this->ss_url.$res_url;
 
-//$this->add_trace('adjust_URL 3.2 ID : '.$this->sp_id.' res_url : '.$res_url);                   
+$this->add_trace('3.2 ID : '.$this->sp_id.' res_url : '.$res_url,'value', __FUNCTION__); 
 
       } elseif (substr($res_url,0,4) != 'http') // начинается с непонятно чего даже без слеша
       {
         $res_url = $this->ss_url.'/'.$res_url;
-//$this->add_trace('adjust_URL 3.2 ID : '.$this->sp_id.' res_url : '.$res_url);                   
+$this->add_trace('3.2 ID : '.$this->sp_id.' res_url : '.$res_url,'value', __FUNCTION__);
       }
       elseif (substr($res_url,0,strlen($this->ss_url)) != $this->ss_url) // если внешняя ссылка
       {
@@ -928,7 +930,7 @@ $this->add_trace(" get_node 4.2 val =".$val  . 'MODE_GET_NODE = '.$this->mode_ge
      }
 
     // пишет сообщение в трейс таблицу t_trace
-    function add_trace($trace_text, $cat = null){
+    function add_trace($trace_text, $cat = null, $func = null){
 
 
         If (!$this->is_trace) return;
@@ -938,7 +940,10 @@ $this->add_trace(" get_node 4.2 val =".$val  . 'MODE_GET_NODE = '.$this->mode_ge
 
         Yii::$app->db->createCommand()
             ->insert('t_trace', 
-                     ["trace_comment" => addslashes(Substr($trace_text,0,400)),]) 
+                     ["trace_comment" => addslashes(Substr($trace_text,0,400)),
+                     "trace_group" => $cat,
+                     "trace_func" => $func,
+                 ]) 
             ->execute();
      }
 
@@ -963,15 +968,12 @@ $this->add_trace(" get_node 4.2 val =".$val  . 'MODE_GET_NODE = '.$this->mode_ge
             }
 
             return $innerHTML; 
-
     }
 
 /************************************************************************/
 // **********************  PRICE  ***************************************/
 /************************************************************************/
-
 /*
- 
           // 1. Крутим цикл по прайсу
 
           // 1.1. На каждой позиции прайса строим страницу поиска и запихиваем ее в Source_page
@@ -998,8 +1000,6 @@ $this->add_trace(" get_node 4.2 val =".$val  . 'MODE_GET_NODE = '.$this->mode_ge
                                                  pr_nodetype = 'n'
         5. В блок if в price_settings() настроить маску для URL строки поиска  $this->searchmask
         6. Присвоить переменной $this->pager_page_n значение первой страницы результатов поиска
-
-
 */
 
     // установка настроечных параметров на каталоги
@@ -1047,7 +1047,7 @@ $this->add_trace(" get_node 4.2 val =".$val  . 'MODE_GET_NODE = '.$this->mode_ge
             $this->url_per_price_counter = 0; // Количество вариантов сохраняемых карточек, если найдено несколько ссылок
 
 
-$this->add_trace('PRICE 1 Cust_id : '.$this->cust_id.'   Наименование : '.$price_row['price_modelname']);
+$this->add_trace('1 Cust_id : '.$this->cust_id.'   Наименование : '.$price_row['price_modelname'],'value', __FUNCTION__);
             $this->price_id = $price_row['price_id'];
 
            // формируем ссылку поиска
@@ -1057,19 +1057,19 @@ $this->add_trace('PRICE 1 Cust_id : '.$this->cust_id.'   Наименовани�
                 $search_string = $price_row['price_modelcode'];
             };
 
-$this->add_trace('PRICE 2 search_string = '.$search_string);
+$this->add_trace('2 search_string = '.$search_string,'value', __FUNCTION__);
             // формируем строку поиска по маске конкретного каталога 
             $search_url=sprintf($this->searchmask, $this->space2plus($search_string), $this->pager_page_n);
-$this->add_trace('PRICE 3 search_url = '.$search_url);
+$this->add_trace('3 search_url = '.$search_url,'value', __FUNCTION__);
             // инициализируем переменную ссылкой
             $this->sp_url = $search_url;
-$this->add_trace('PRICE 4 insert_price_ulr_list this->sp_url = '.$this->sp_url);
+$this->add_trace('4 insert_price_ulr_list this->sp_url = '.$this->sp_url,'value', __FUNCTION__);
             // выгребаем страницу
             $this->get_page();
-$this->add_trace('PRICE 5 insert_price_ulr_list this->sp_url = '.$this->sp_url);            
+$this->add_trace('5 insert_price_ulr_list this->sp_url = '.$this->sp_url,'value', __FUNCTION__);
             // выгрбаем через селекторы все ссылки 
             $this->get_content();
-$this->add_trace('PRICE 7 insert_price_ulr_list this->sp_url = '.$this->sp_url);
+$this->add_trace('7 insert_price_ulr_list this->sp_url = '.$this->sp_url,'value', __FUNCTION__);
             ++ $this->counter_made_price_row;
         };
     }
@@ -1080,9 +1080,9 @@ $this->add_trace('PRICE 7 insert_price_ulr_list this->sp_url = '.$this->sp_url);
 
         ++ $this->url_per_price_counter;
 
-$this->add_trace('PRICE 6 insert_price_ulr_list VAL = '.$val);
+$this->add_trace('6 insert_price_ulr_list VAL = '.$val,'value', __FUNCTION__);
         $res_url = $this->adjust_URL($val);
-$this->add_trace('PRICE 6.1 insert_price_ulr_list res_url = '.$res_url[0]);
+$this->add_trace('6.1 insert_price_ulr_list res_url = '.$res_url[0],'value', __FUNCTION__);
         if (!empty($res_url[0]) and ($this->url_per_price_counter<=$this->url_per_price))
         {
             try {
@@ -1137,8 +1137,8 @@ $this->add_trace('PRICE 6.1 insert_price_ulr_list res_url = '.$res_url[0]);
             ->addParams([':dt_name' => mb_strtolower($parname,'utf8'),])
             ->one();
 
-$this->add_trace('Tab_analyse name_value_subst 1  LOW parname = '.mb_strtolower($parname,'utf8'));
-$this->add_trace('Tab_analyse name_value_subst 2  parname = '.$parname);
+$this->add_trace('Tab_analyse 1  LOW parname = '.mb_strtolower($parname,'utf8'),'value', __FUNCTION__);
+$this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
 
         if (!empty($dt_vals['dt_id'])){
             //var_dump($dt_vals);die;
@@ -1170,12 +1170,11 @@ $this->add_trace('Tab_analyse name_value_subst 2  parname = '.$parname);
       Обработать дефолтные значения 
     */ 
 
-
     
     function export_main_f(){
 
 
-
+        // В цикле выбираем варианты экспорта, которые будем выполнять
         $exp_source_format  = Yii::$app->db->createCommand('SELECT ec.ec_id from export_customer ec 
                         where exists (Select 1 from export_link_tag_field eltf 
                                 where eltf.eltf_ec_id = ec.ec_id) and ec.ec_cust_id = :cust_id')
@@ -1184,15 +1183,16 @@ $this->add_trace('Tab_analyse name_value_subst 2  parname = '.$parname);
 
         foreach ($exp_source_format as  $value) {
 
-$this->add_trace('EXPORT 1 export_main_f value[ec_id] = '.$value['ec_id']);
+$this->add_trace('1 export_main_f value[ec_id] = '.$value['ec_id'],'value', __FUNCTION__);
 
             $this->outputs_csv = array();
             $this->outputs_csv_pattern = array();
             $this->outputs_csv_index = 0;
 
+            // Получаем ID экспорта
             $this->ec_id = $value['ec_id'];
 
-
+            // имя получаемого файла
             $this->outputs_csv_file = $this->result_csv_path.$this->cust_id.'_'.$this->ss_id.'_'.$this->ec_id.'.csv';
              if (is_file($this->outputs_csv_file))
                     unlink($this->outputs_csv_file);
@@ -1208,12 +1208,13 @@ $this->add_trace('EXPORT 1 export_main_f value[ec_id] = '.$value['ec_id']);
     function export_define_data()
     {
 
-$this->add_trace('EXPORT 2.1 export_define_data');
+$this->add_trace('2.1 ','marker', __FUNCTION__);
         $this->make_output_header();
-$this->add_trace('EXPORT 2.2 export_define_data');
+$this->add_trace('2.2 ','marker', __FUNCTION__);
         $exp_source_page = (new \yii\db\Query())
-            ->select(['rd_sp_id', 'max(rd_parentchild_seria) sub_items'])
+            ->select(['rd_sp_id', 'max(rd_parentchild_seria) sub_items', 'sp.sp_url'])
             ->from('result_data rd')
+            ->join('left join','source_page sp', 'rd.rd_sp_id = sp.sp_id')
             ->where('rd.rd_ss_id = :rd_ss_id')
             ->addParams([':rd_ss_id' => $this->ss_id,])
             ->groupBy('rd_sp_id')
@@ -1223,7 +1224,7 @@ $this->add_trace('EXPORT 2.2 export_define_data');
         // идем по страницам источникам
         foreach ($exp_source_page as $root_value) {
 
-$this->add_trace('EXPORT 2.3 export_define_data root_value[rd_sp_id] = '.$root_value['rd_sp_id']);
+$this->add_trace('2.3 export_define_data root_value[rd_sp_id] = '.$root_value['rd_sp_id'],'value', __FUNCTION__);
             // внутри делаем выборку всех характеристик с одной страницы
             $exp_parent_items = (new \yii\db\Query())
                 ->select(['*'])
@@ -1242,10 +1243,12 @@ $this->add_trace('EXPORT 2.3 export_define_data root_value[rd_sp_id] = '.$root_v
             if ($root_value['sub_items']==1) {  // есть только корневые 
 
                 $this->exp_append();
+                // втыкаем ID товара
+                $this->put_element_to_output(0,  $this->get_id($root_value['sp_url'], 0));
 
                 foreach ( $exp_parent_items as $p_value) {
 
-$this->add_trace('EXPORT 2.4 export_define_data p_value[rd_id] = '.$p_value['rd_id']);
+$this->add_trace('2.4 export_define_data p_value[rd_id] = '.$p_value['rd_id'],'value', __FUNCTION__);
                     if ($p_value['dt_is_img']=='1') // если изображение
                     {
                         $this->put_element_to_output($p_value['rd_dt_id'], $p_value['ri_img_path'].
@@ -1261,12 +1264,12 @@ $this->add_trace('EXPORT 2.4 export_define_data p_value[rd_id] = '.$p_value['rd_
                 for ($i = 1; $i <= $root_value['sub_items']-1; $i++){
 
                     $this->exp_append();
-
+                    $this->put_element_to_output(0,  $this->get_id($root_value['sp_url'], $i));
 
                     /* BEGIN блок выгрузки нулевых значений*/
                    reset($exp_parent_items);
                    foreach ( $exp_parent_items as $p_value) {
-$this->add_trace('EXPORT 2.5 export_define_data p_value[rd_id] = '.$p_value['rd_id']);     
+$this->add_trace('2.5 export_define_data p_value[rd_id] = '.$p_value['rd_id'],'value', __FUNCTION__);
                         if ($p_value['dt_is_img']=='1') // если изображение
                         {
                             $this->put_element_to_output($p_value['rd_dt_id'], $p_value['ri_img_path'].$p_value['ri_img_name']);
@@ -1278,7 +1281,7 @@ $this->add_trace('EXPORT 2.5 export_define_data p_value[rd_id] = '.$p_value['rd_
 
 
                     $exp_child_items = (new \yii\db\Query())
-                        ->select(['*'])
+                        ->select(['rd_id', 'dt_is_img', 'rd_dt_id', 'ri_img_path', 'ri_img_name', 'dt_rd_field', 'rd_short_data', 'rd_long_data'])
                         ->from('result_data rd')
                         ->join('left join','result_img ri', 'rd.rd_id = ri.ri_rd_id')
                         ->join('left join','dir_tags dt', 'rd.rd_dt_id = dt.dt_id')
@@ -1290,7 +1293,7 @@ $this->add_trace('EXPORT 2.5 export_define_data p_value[rd_id] = '.$p_value['rd_
                         ->all();
 
                     foreach ( $exp_child_items as $c_value) {
-$this->add_trace('EXPORT 2.6 export_define_data c_value[rd_id] = '.$c_value['rd_id']);                        
+$this->add_trace('2.6 export_define_data c_value[rd_id] = '.$c_value['rd_id'],'value', __FUNCTION__);
                         if ($c_value['dt_is_img']=='1') // если изображение
                         {
                             $this->put_element_to_output($c_value['rd_dt_id'], $c_value['ri_img_path'].$c_value['ri_img_name']);
@@ -1311,7 +1314,7 @@ $this->add_trace('EXPORT 2.6 export_define_data c_value[rd_id] = '.$c_value['rd_
     // формируем заголовок массива выгрузки
     function make_output_header(){
 
-$this->add_trace('EXPORT 3 make_output_header'); 
+$this->add_trace('3','marker', __FUNCTION__); 
 
         $this->outputs_csv_nparam = 0;
 
@@ -1326,22 +1329,20 @@ $this->add_trace('EXPORT 3 make_output_header');
 
         foreach ($exp_fields as $value) {
 
-                ++ $this->outputs_csv_nparam;
+            ++ $this->outputs_csv_nparam;
                 // Добавляем все поля в выходной массив 
-                $this->outputs_csv[0][$this->outputs_csv_nparam-1] = trim($value['ecf_field']);
-                // шаблон строки выходного массива с дефолтами                
-                $this->outputs_csv_pattern[$this->outputs_csv_nparam-1] = (!is_null($value['ed_value'])?trim($value['ed_value']):'');
-
+            $this->outputs_csv[0][$this->outputs_csv_nparam-1] = trim($value['ecf_field']);
+               // шаблон строки выходного массива с дефолтами                
+            $this->outputs_csv_pattern[$this->outputs_csv_nparam-1] = (!is_null($value['ed_value'])?trim($value['ed_value']):'');
         };
         $this->exp_append();
-        
     }
 
     /***************************************/
     // На вход id тега и значение - вносим значение в элемент массива
     function put_element_to_output($tag_id, $val){
 
-$this->add_trace('EXPORT 4.0 put_element_to_output tag = '.$tag_id);      
+$this->add_trace('4.0 tag = '.$tag_id,'value', __FUNCTION__);
         $res = null;
         $exp_fields = (new \yii\db\Query())
             ->select(['trim(ecf.ecf_field) ecf_field', 'trim(dt.dt_name) dt_name'])
@@ -1356,20 +1357,21 @@ $this->add_trace('EXPORT 4.0 put_element_to_output tag = '.$tag_id);
             $val = trim($val);
 
         if (empty($exp_fields['ecf_field'])) return;
-$this->add_trace('EXPORT 4.1 put_element_to_output tag = '.$tag_id);
+$this->add_trace('4.1 tag = '.$tag_id,'value', __FUNCTION__);
 
 //var_dump($exp_fields);
 //var_dump($this->outputs_csv[0]);
 
         $res = array_search(trim($exp_fields['ecf_field']), $this->outputs_csv[0]);
+
 //var_dump($res); die;        
-$this->add_trace('EXPORT 4.2 put_element_to_output tag = '.$tag_id);                  
+$this->add_trace('4.2  tag = '.$tag_id,'value', __FUNCTION__); 
         if (empty($res)) return;
 
             // обрабатываем особые форматы
         if (trim($exp_fields['ecf_field']) == 'Feature(Name:Value:Position)') //PrestaShop
         {
-$this->add_trace('EXPORT 4.3 put_element_to_output ');
+$this->add_trace('4.3 ','marker', __FUNCTION__);
             $this->outputs_csv[1][$res] .= $exp_fields['dt_name'].':'.$val.':1'.',';
 
         } elseif (trim($exp_fields['ecf_field']) == 'Categories (x,y,z...)') { //PrestaShop
@@ -1379,7 +1381,7 @@ $this->add_trace('EXPORT 4.3 put_element_to_output ');
             $this->outputs_csv[1][$res] .= $val.',';            
 
         } else { // общий случай. Просто вносим значение без предобработки
-$this->add_trace('EXPORT 4.4 put_element_to_output');
+$this->add_trace('4.4 ','marker', __FUNCTION__);
             $this->outputs_csv[1][$res] = $val;
         };
     }
@@ -1414,4 +1416,90 @@ $this->add_trace('EXPORT 4.4 put_element_to_output');
         file_put_contents($this->outputs_csv_file, mb_convert_encoding($res_str,'UTF-8'), FILE_APPEND);
 
     }
+
+    /*
+    создает и возвращает ID записи
+    Если не находит - создает. находит - выдает готовый.
+    */
+    function get_id($url = null, $seria_number = 0)
+    {
+        $start_id = null;
+        $new_id = null;
+        $ec_id = $this->ec_id;
+$this->add_trace('1 ','marker', __FUNCTION__);
+        $row_ec = (new \yii\db\Query())
+            ->select(['ec_root_id_ec_id', 'ec_id_start_n'])
+            ->from('export_customer')
+            ->where('ec_id=:ec_id ')
+            ->addParams([':ec_id' =>  $this->ec_id,])
+            ->one();
+
+        // выбираем откуда брать счетчик
+        if (!empty($row_ec['ec_root_id_ec_id'])) {
+            $ec_id = $row_ec['ec_root_id_ec_id'];
+            if ($ec_id == $this->ec_id) {
+$this->add_trace('2 ','marker', __FUNCTION__);                
+                $start_id = $row_ec['ec_id_start_n'];
+            }
+
+        }
+
+        $rows = (new \yii\db\Query())
+            ->select(['ei_product_id'])
+            ->from('export_id')
+            ->where('ei_rd_parentchild_seria = :ei_rd_parentchild_seria and '.
+                    ' ei_ec_id=:ei_ec_id and '.
+                    ' ei_url = :ei_url')
+            ->addParams([':ei_ec_id' =>  $ec_id, 
+                        ':ei_rd_parentchild_seria' => $seria_number,
+                        ':ei_url' => $url])
+            ->one();
+     
+        // номер уже создан - возвращаем и выходим
+        If  (!empty($rows['ei_product_id'])) return $rows['ei_product_id'];
+
+        // Нужно сгенерить!
+$this->add_trace('3 Значения небыло','marker', __FUNCTION__);        
+        $rows = (new \yii\db\Query())
+            ->select(['max(ei_product_id) as max_ei_product_id'])
+            ->from('export_id')
+            ->where(' ei_ec_id=:ei_ec_id ')
+            ->addParams([':ei_ec_id' =>  $ec_id, ])
+            ->one();
+
+
+
+        // если есть предыдущие номера
+        If  (!empty($rows['max_ei_product_id'])) {
+$this->add_trace('4 Все хорошо. Инкримент  max_ei_product_id ='.$rows['max_ei_product_id'],'marker', __FUNCTION__);                    
+            $new_id = $rows['max_ei_product_id']+1;
+        } else {  // предыдущих нет
+                    
+            
+            // получаем стартовый номер
+            $row_ec = (new \yii\db\Query())
+                    ->select(['ec_id_start_n'])
+                    ->from('export_customer')
+                    ->where('ec_id=:ec_id ')
+                    ->addParams([':ec_id' =>  $ec_id,])
+                    ->one();
+
+$this->add_trace('5 ТОЛЬКО первый раз - стартовое ec_id_start_n ='.$row_ec['ec_id_start_n'],'marker', __FUNCTION__);             
+            $start_id = $row_ec['ec_id_start_n'];
+            $new_id = $start_id;
+        };
+
+        // Втыкаем новый номер 
+        Yii::$app->db->createCommand()
+            ->insert('export_id', 
+                        ["ei_ec_id" => $this->ec_id,
+                         "ei_rd_parentchild_seria" =>  $seria_number,
+                         "ei_url" =>  $url,
+                         "ei_product_id" =>  $new_id,
+                        ]) 
+             ->execute();
+        return $new_id;
+    }
+
+
 }

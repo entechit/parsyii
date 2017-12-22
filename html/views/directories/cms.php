@@ -97,6 +97,22 @@ $dataProvider = new ActiveDataProvider([
         'pageSize' => 20,
     ],
 ]);
+
+$dataProvider->setSort([
+        'attributes' => [
+            'dc_id',
+            'dc_name',
+            'sitesCount' => [
+                'asc' => ['sitesCount' => SORT_ASC],
+                'desc' => ['sitesCount' => SORT_DESC],
+            ],
+            'customersCount' => [
+                'asc' => ['customersCount' => SORT_ASC],
+                'desc' => ['customersCount' => SORT_DESC],
+            ]
+            
+        ]
+    ]);
 ?>
 
 <?php Pjax::begin(['id' => 'cms_list']);
@@ -107,7 +123,6 @@ echo GridView::widget([
         'attribute' => 'dc_id',
         'label' => 'Id',
     ],
-
     [
         'attribute' => 'dc_name',
         'label' => 'Название',
@@ -119,9 +134,7 @@ echo GridView::widget([
     [
         'attribute' => 'customersCount',
         'label' => 'Количество заказчиков',
-    ]
-    
-    
+    ]   
          ,
          [
             'class' => 'yii\grid\ActionColumn',
