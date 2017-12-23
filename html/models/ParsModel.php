@@ -68,7 +68,9 @@ class ParsModel extends Model
     public $outputs_csv_index; // указатель на текущий формируемый элемент массива
     public $outputs_csv_nparam; // количество выгружаемых параметров
     public $outputs_csv_file; // имя ипуть результирующего файла
-
+    public $exp_fields; // поля для экспорта
+    public $export_start_id; // стартовый номер для нумерации
+    public $export_ec_id; // куда смотрим для нумерации
 
     public $result_csv_path;
     public $ec_id;
@@ -81,13 +83,13 @@ class ParsModel extends Model
         $this->sp_id = -1;
         $this->sp_seek_urls;
         $this->parslog = '';
-        $this->ri_img_path = '../parsdata/';
+        $this->ri_img_path     = '../parsdata/';
         $this->result_csv_path = '../parsdata/';
-        $this->ri_src_path = '../source_page/';
+        $this->ri_src_path     = '../source_page/';
         $this->is_proxy = true;
 
-        $this->is_trace = true;
-        $this->trace_cats = array('value');  // memory - контроль памяти  value - контроль значений marker - показываем точку в программе
+        $this->is_trace = false;
+        $this->trace_cats = array('value','marker');  // memory - контроль памяти  value - контроль значений marker - показываем точку в программе
 
 
         $this->counter_dl_img = 0;      // количество скачаных картинок
@@ -988,7 +990,7 @@ $this->add_trace('3.2 ID : '.$this->sp_id.' res_url : '.$res_url,'value', __FUNC
 
         Шаги для описания страницы поиска каталога:
         1. Каталог должен быть описан в dir_cms. Описать блок if в price_settings()
-        2. Должна быть заведена страница поиска в dir_psge_cms
+        2. Должна быть заведена страница поиска в dir_page_cms
         3. Страницу поиска описать  price_settings() в IF  переменную $this->sp_dp_id
         4. В parse_rule описать 2 записи селектора:
            - квери для получения набора ссылок: pr_dp_id = $this->sp_dp_id
@@ -1009,6 +1011,16 @@ $this->add_trace('3.2 ID : '.$this->sp_id.' res_url : '.$res_url,'value', __FUNC
         $this->counter_add_price_pages = 0; // найдено ссылок для строк прайса 
         $this->url_per_price_counter = 0; // инит счетчика ссылок на 1 позицию
         $res = false;
+
+
+        if ($this->dc_id == 142) //'http://amazon.co.jp
+        {
+            $this->searchmask = "https://www.amazon.co.jp/s/field-keywords=%s&p=%s";
+            $this->sp_dp_id = 52; // страница с результатами поиска на Hotline
+            $this->pager_page_n = 0;
+            $res = true;
+            $this->url_per_price = 1; // Количество вариантов сохраняемых карточек, если найдено несколько ссылок
+        };
 
 
         if ($this->dc_id == 71) //'http://hotline.ua'
@@ -1173,7 +1185,7 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
     
     function export_main_f(){
 
-
+      $fname='';
         // В цикле выбираем варианты экспорта, которые будем выполнять
         $exp_source_format  = Yii::$app->db->createCommand('SELECT ec.ec_id from export_customer ec 
                         where exists (Select 1 from export_link_tag_field eltf 
@@ -1183,7 +1195,7 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
 
         foreach ($exp_source_format as  $value) {
 
-$this->add_trace('1 export_main_f value[ec_id] = '.$value['ec_id'],'value', __FUNCTION__);
+$this->add_trace('1 value[ec_id] = '.$value['ec_id'],'value', __FUNCTION__);
 
             $this->outputs_csv = array();
             $this->outputs_csv_pattern = array();
@@ -1197,10 +1209,34 @@ $this->add_trace('1 export_main_f value[ec_id] = '.$value['ec_id'],'value', __FU
              if (is_file($this->outputs_csv_file))
                     unlink($this->outputs_csv_file);
 
+            $fname = $fname .'  '.$this->outputs_csv_file;
+            // определяем поля экспорта
+            $this->exp_fields = (new \yii\db\Query())
+              ->select(['eltf.eltf_dt_id','trim(ecf.ecf_field) ecf_field', 'trim(dt.dt_name) dt_name', 'ecf.ecf_datatype'])
+              ->from('export_link_tag_field eltf')
+              ->join('left join', 'dir_tags dt', 'dt.dt_id = eltf.eltf_dt_id')
+              ->join('left join', 'export_cms_field ecf', 'ecf.ecf_id = eltf.eltf_ecf_id')
+              ->where('eltf.eltf_ec_id = :ec_id and dt.dt_id is not null')
+              ->addParams([':ec_id' => $this->ec_id,])
+              ->all();   
+
+              // формируем стартовый номер для новой нумерации
+            $row_ec  = (new \yii\db\Query())
+              ->select(['t.ec_id root_id', 't.ec_id_start_n start_id'])
+              ->from('export_customer c')
+              ->join('INNER JOIN','export_customer t', 'c.ec_root_id_ec_id=t.ec_id')
+              ->where('c.ec_id=:ec_id')
+              ->addParams([':ec_id' => $this->ec_id,])
+              ->one();
+
+              $this->export_start_id =  $row_ec['start_id'];
+              $this->export_ec_id = $row_ec['root_id'];
+
+
             $this->export_define_data();
         };
 
-        $this->addlog(" На диск сохранен файл:  ".$this->outputs_csv_file);
+        $this->addlog(" На диск сохранен файл:  ".$fname);
     }
     
     /***************************************/
@@ -1224,7 +1260,7 @@ $this->add_trace('2.2 ','marker', __FUNCTION__);
         // идем по страницам источникам
         foreach ($exp_source_page as $root_value) {
 
-$this->add_trace('2.3 export_define_data root_value[rd_sp_id] = '.$root_value['rd_sp_id'],'value', __FUNCTION__);
+$this->add_trace('2.3 root_value[rd_sp_id] = '.$root_value['rd_sp_id'],'value', __FUNCTION__);
             // внутри делаем выборку всех характеристик с одной страницы
             $exp_parent_items = (new \yii\db\Query())
                 ->select(['*'])
@@ -1238,20 +1274,23 @@ $this->add_trace('2.3 export_define_data root_value[rd_sp_id] = '.$root_value['r
 
 
                 // если серийных данных нет, только корневые 1:1
-            if ($root_value['sub_items']==0) continue;
 
-            if ($root_value['sub_items']==1) {  // есть только корневые 
+          // if ($root_value['sub_items']==0) continue;
+
+            if ($root_value['sub_items']==0) {  // есть только корневые 
 
                 $this->exp_append();
                 // втыкаем ID товара
                 $this->put_element_to_output(0,  $this->get_id($root_value['sp_url'], 0));
 
+$this->add_trace('2.3.4. sub_items = '.$root_value['sub_items'],'value', __FUNCTION__);
+
                 foreach ( $exp_parent_items as $p_value) {
 
-$this->add_trace('2.4 export_define_data p_value[rd_id] = '.$p_value['rd_id'],'value', __FUNCTION__);
+$this->add_trace('2.4 p_value[rd_id] = '.$p_value['rd_id'],'value', __FUNCTION__);
                     if ($p_value['dt_is_img']=='1') // если изображение
                     {
-                        $this->put_element_to_output($p_value['rd_dt_id'], $p_value['ri_img_path'].
+                        $this->put_element_to_output($p_value['rd_dt_id'], $p_value['ri_img_path'].'/'.
                             $p_value['ri_img_name']);
                     } else {
                         $this->put_element_to_output($p_value['rd_dt_id'], $p_value[$p_value['dt_rd_field']]);
@@ -1269,10 +1308,10 @@ $this->add_trace('2.4 export_define_data p_value[rd_id] = '.$p_value['rd_id'],'v
                     /* BEGIN блок выгрузки нулевых значений*/
                    reset($exp_parent_items);
                    foreach ( $exp_parent_items as $p_value) {
-$this->add_trace('2.5 export_define_data p_value[rd_id] = '.$p_value['rd_id'],'value', __FUNCTION__);
+$this->add_trace('2.5 p_value[rd_id] = '.$p_value['rd_id'],'value', __FUNCTION__);
                         if ($p_value['dt_is_img']=='1') // если изображение
                         {
-                            $this->put_element_to_output($p_value['rd_dt_id'], $p_value['ri_img_path'].$p_value['ri_img_name']);
+                            $this->put_element_to_output($p_value['rd_dt_id'], $p_value['ri_img_path'].'/'.$p_value['ri_img_name']);
                         } else {
                             $this->put_element_to_output($p_value['rd_dt_id'], $p_value[$p_value['dt_rd_field']]);
                         };
@@ -1293,12 +1332,12 @@ $this->add_trace('2.5 export_define_data p_value[rd_id] = '.$p_value['rd_id'],'v
                         ->all();
 
                     foreach ( $exp_child_items as $c_value) {
-$this->add_trace('2.6 export_define_data c_value[rd_id] = '.$c_value['rd_id'],'value', __FUNCTION__);
+$this->add_trace('2.6 c_value[rd_id] = '.$c_value['rd_id'],'value', __FUNCTION__);
                         if ($c_value['dt_is_img']=='1') // если изображение
                         {
-                            $this->put_element_to_output($c_value['rd_dt_id'], $c_value['ri_img_path'].$c_value['ri_img_name']);
+                            $this->put_element_to_output($c_value['rd_dt_id'], $c_value['ri_img_path'].'/'.$c_value['ri_img_name']);
                         } else {
-                        $this->put_element_to_output($c_value['rd_dt_id'], $c_value[$c_value['dt_rd_field']]);
+                          $this->put_element_to_output($c_value['rd_dt_id'], $c_value[$c_value['dt_rd_field']]);
                         };
                     };
                     
@@ -1325,6 +1364,7 @@ $this->add_trace('3','marker', __FUNCTION__);
             ->where('ecf.ecf_ec_id = :ec_id and (ed.ed_ss_id = :ss_id or ed.ed_ss_id is null)')
             ->addParams([':ec_id' => $this->ec_id,
                          ':ss_id' => $this->ss_id,])
+            ->orderBy(['ecf.ecf_id' => SORT_ASC])
             ->all();   
 
         foreach ($exp_fields as $value) {
@@ -1335,38 +1375,46 @@ $this->add_trace('3','marker', __FUNCTION__);
                // шаблон строки выходного массива с дефолтами                
             $this->outputs_csv_pattern[$this->outputs_csv_nparam-1] = (!is_null($value['ed_value'])?trim($value['ed_value']):'');
         };
-        $this->exp_append();
+     //   $this->exp_append();
+    }
+
+
+    function put_element_to_output($tag_id, $val){
+
+      // чтобы можно было один тег повторить в нескольких полях
+        foreach ($this->exp_fields as $exp_fields) {
+          if ($exp_fields['eltf_dt_id'] == $tag_id) {
+              $this->put_element_to_output_sub($tag_id, $val, $exp_fields);
+          }
+        }
+
     }
 
     /***************************************/
     // На вход id тега и значение - вносим значение в элемент массива
-    function put_element_to_output($tag_id, $val){
+    function put_element_to_output_sub($tag_id, $val, $exp_fields){
 
 $this->add_trace('4.0 tag = '.$tag_id,'value', __FUNCTION__);
         $res = null;
-        $exp_fields = (new \yii\db\Query())
-            ->select(['trim(ecf.ecf_field) ecf_field', 'trim(dt.dt_name) dt_name'])
-            ->from('export_link_tag_field eltf')
-            ->join('left join', 'dir_tags dt', 'dt.dt_id = eltf.eltf_dt_id')
-            ->join('left join', 'export_cms_field ecf', 'ecf.ecf_id = eltf.eltf_ecf_id')
-            ->where('eltf.eltf_ec_id = :ec_id and eltf.eltf_dt_id = :dt_id and dt.dt_id is not null')
-            ->addParams([':ec_id' => $this->ec_id,
-                        ':dt_id' => $tag_id,])
-            ->one();   
 
-            $val = trim($val);
+        $val = trim($val);
 
         if (empty($exp_fields['ecf_field'])) return;
+
 $this->add_trace('4.1 tag = '.$tag_id,'value', __FUNCTION__);
 
 //var_dump($exp_fields);
 //var_dump($this->outputs_csv[0]);
 
+$this->add_trace('4.1.1  exp_fields[ecf_field] = '.$exp_fields['ecf_field'],'value', __FUNCTION__); 
         $res = array_search(trim($exp_fields['ecf_field']), $this->outputs_csv[0]);
+$this->add_trace('4.1.2  res - index of field = '.$res,'value', __FUNCTION__); 
+
 
 //var_dump($res); die;        
-$this->add_trace('4.2  tag = '.$tag_id,'value', __FUNCTION__); 
-        if (empty($res)) return;
+//$this->add_trace('4.2  tag = '.$tag_id,'value', __FUNCTION__); 
+
+        if (is_null($res)) return;
 
             // обрабатываем особые форматы
         if (trim($exp_fields['ecf_field']) == 'Feature(Name:Value:Position)') //PrestaShop
@@ -1380,9 +1428,20 @@ $this->add_trace('4.3 ','marker', __FUNCTION__);
         } elseif (trim($exp_fields['ecf_field']) == 'Image URLs (x,y,z...)') { //PrestaShop
             $this->outputs_csv[1][$res] .= $val.',';            
 
+        } elseif (trim($exp_fields['ecf_field']) == 'description(ru-ru)') { //OpenCart
+            $this->outputs_csv[1][$res] .= $val.',';            
+
+
         } else { // общий случай. Просто вносим значение без предобработки
-$this->add_trace('4.4 ','marker', __FUNCTION__);
-            $this->outputs_csv[1][$res] = $val;
+
+          // экранируем двойную кавычку еще одной
+          $val = str_replace('"', '""',$val);
+$this->add_trace('4.4 ecf_datatype = '.$exp_fields['ecf_datatype'],'value', __FUNCTION__);
+            if ($exp_fields['ecf_datatype'] == 'v') {  // значения
+              $this->outputs_csv[1][$res] = $val;
+            } elseif ($exp_fields['ecf_datatype'] == 'n') { // имена тегов
+              $this->outputs_csv[1][$res] = $exp_fields['dt_name'];
+            }
         };
     }
 
@@ -1392,12 +1451,10 @@ $this->add_trace('4.4 ','marker', __FUNCTION__);
         $this->exp_cycle();   
         $this->outputs_csv_index = 1;
         $this->outputs_csv[1] = $this->outputs_csv_pattern;
-
-   // var_dump($this->outputs_csv_pattern);
-   // var_dump($this->outputs_csv);die;
     }
 
-      // выгрузка результирующего массива в текстовый файл
+      
+    // выгрузка результирующего массива в текстовый файл
     function exp_cycle()
     {
         $res_str = '';
@@ -1417,32 +1474,17 @@ $this->add_trace('4.4 ','marker', __FUNCTION__);
 
     }
 
-    /*
+    /********************************
     создает и возвращает ID записи
     Если не находит - создает. находит - выдает готовый.
-    */
+    *********************************/
     function get_id($url = null, $seria_number = 0)
     {
-        $start_id = null;
+        $this->export_start_id = null;
         $new_id = null;
-        $ec_id = $this->ec_id;
+        
 $this->add_trace('1 ','marker', __FUNCTION__);
-        $row_ec = (new \yii\db\Query())
-            ->select(['ec_root_id_ec_id', 'ec_id_start_n'])
-            ->from('export_customer')
-            ->where('ec_id=:ec_id ')
-            ->addParams([':ec_id' =>  $this->ec_id,])
-            ->one();
-
-        // выбираем откуда брать счетчик
-        if (!empty($row_ec['ec_root_id_ec_id'])) {
-            $ec_id = $row_ec['ec_root_id_ec_id'];
-            if ($ec_id == $this->ec_id) {
-$this->add_trace('2 ','marker', __FUNCTION__);                
-                $start_id = $row_ec['ec_id_start_n'];
-            }
-
-        }
+        
 
         $rows = (new \yii\db\Query())
             ->select(['ei_product_id'])
@@ -1450,11 +1492,11 @@ $this->add_trace('2 ','marker', __FUNCTION__);
             ->where('ei_rd_parentchild_seria = :ei_rd_parentchild_seria and '.
                     ' ei_ec_id=:ei_ec_id and '.
                     ' ei_url = :ei_url')
-            ->addParams([':ei_ec_id' =>  $ec_id, 
+            ->addParams([':ei_ec_id' =>  $this->export_ec_id, 
                         ':ei_rd_parentchild_seria' => $seria_number,
                         ':ei_url' => $url])
             ->one();
-     
+$this->add_trace('2.5 Если значение есть ID = '.$rows['ei_product_id'],'marker', __FUNCTION__);             
         // номер уже создан - возвращаем и выходим
         If  (!empty($rows['ei_product_id'])) return $rows['ei_product_id'];
 
@@ -1464,29 +1506,15 @@ $this->add_trace('3 Значения небыло','marker', __FUNCTION__);
             ->select(['max(ei_product_id) as max_ei_product_id'])
             ->from('export_id')
             ->where(' ei_ec_id=:ei_ec_id ')
-            ->addParams([':ei_ec_id' =>  $ec_id, ])
+            ->addParams([':ei_ec_id' =>  $this->export_ec_id, ])
             ->one();
-
-
 
         // если есть предыдущие номера
         If  (!empty($rows['max_ei_product_id'])) {
 $this->add_trace('4 Все хорошо. Инкримент  max_ei_product_id ='.$rows['max_ei_product_id'],'marker', __FUNCTION__);                    
             $new_id = $rows['max_ei_product_id']+1;
         } else {  // предыдущих нет
-                    
-            
-            // получаем стартовый номер
-            $row_ec = (new \yii\db\Query())
-                    ->select(['ec_id_start_n'])
-                    ->from('export_customer')
-                    ->where('ec_id=:ec_id ')
-                    ->addParams([':ec_id' =>  $ec_id,])
-                    ->one();
-
-$this->add_trace('5 ТОЛЬКО первый раз - стартовое ec_id_start_n ='.$row_ec['ec_id_start_n'],'marker', __FUNCTION__);             
-            $start_id = $row_ec['ec_id_start_n'];
-            $new_id = $start_id;
+            $new_id = $this->export_start_id;
         };
 
         // Втыкаем новый номер 
@@ -1500,6 +1528,4 @@ $this->add_trace('5 ТОЛЬКО первый раз - стартовое ec_id_
              ->execute();
         return $new_id;
     }
-
-
 }
