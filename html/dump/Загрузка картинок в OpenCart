@@ -1,0 +1,36 @@
+1. В парсере формируем выборку картинок с путями
+2. Добавляем ее как закладку в эксель файл с товарами. Закладку называем  "AdditionalImages"
+https://convertio.co/ru/document-converter/
+3. Импортируем в OpenCart
+
+
+# выгрузка фоток
+Select ei.ei_product_id as product_id,  concat('catalog/AquaMotors/Products/22/', ri.ri_img_name) as image, '' as sort_order
+ from result_data rd
+    left join result_img ri on ri.ri_rd_id = rd.rd_id
+        left join  source_page sp on rd.rd_sp_id = sp.sp_id
+        left join export_id ei on ei.ei_url = sp.sp_url
+        WHERE rd.rd_ss_id = 22 
+      and rd.rd_dt_id = 9 
+            and ei.ei_rd_parentchild_seria = rd.rd_parentchild_seria
+            and ei.ei_ec_id = 3
+limit 100000
+
+
+4. В базе OpenCart выполняем запрос, который удаяет существующие двойники в основной таблице товаров
+# дубликаты в OpenCart
+DELETE FROM oc_product_image WHERE image in (Select image from oc_product WHERE oc_product_image.product_id = oc_product.product_id)        
+    
+
+5. Выгрузка доп. характеристик
+# выгрузка характеристик  ProductAttributes
+Select ei.ei_product_id as product_id, '' as attribute_group, dt.dt_name as attribute, rd.rd_short_data as text_ru_ru
+ from result_data rd
+    left join dir_tags dt on dt.dt_id = rd.rd_dt_id
+        left join  source_page sp on rd.rd_sp_id = sp.sp_id
+        left join export_id ei on ei.ei_url = sp.sp_url
+        WHERE rd.rd_ss_id = 22 
+            and ei.ei_rd_parentchild_seria = rd.rd_parentchild_seria
+            and ei.ei_ec_id = 3
+            and rd.rd_dt_id in (Select eltf_dt_id from  export_link_tag_field WHERE eltf_ec_id = 5)
+limit 100000
