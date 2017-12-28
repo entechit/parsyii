@@ -14,6 +14,7 @@ use app\models\ParsModel;
 use app\models\Cms;
 use app\models\Customer;
 use app\models\Source_site;
+use app\models\Source_page;
 
 class DirectoriesController extends Controller
 {
@@ -41,14 +42,42 @@ class DirectoriesController extends Controller
     
     public function actionSource_site()
     {
-        //print_r($_GET); echo '1';
         $customer ='';
+        $customer_id ='';
+        
         if (isset($_GET['customer']))
-          $customer = $_GET['customer'];
+        {
+          $customer_id = $_GET['customer'];
+          $customer = Customer::findOne($customer_id);                 
+        }
         //  
-        $query = source_site::FindFull($customer);
+        $query = source_site::FindFull($customer_id);
         $model = new source_site();
-        return $this->render('source_site', ['model' => $model, 'query'=> $query]);
+        $customers = Customer::find()->all();
+        $cms = Cms::find()->all();
+        return $this->render('source_site', ['model' => $model, 'query'=> $query, 'customer' =>$customer, 'customers' =>$customers, 'cms' =>$cms] );
+    }
+    
+    public function actionSource_page()
+    {
+      $ss ='';
+      $ss_id ='';
+    //    echo '!'.$_GET['ss'];
+        if (isset($_GET['ss']))
+        {
+          $ss_id = $_GET['ss'];
+          $ss = source_site::findOne($ss_id);                 
+        }
+        //  
+        
+       // $customers = Customer::find()->all();
+        //$cms = Cms::find()->all();
+        
+     
+        $query = source_page::FindFull($ss_id);
+        $model = new source_page();
+        
+        return $this->render('source_page', ['model' => $model, 'query'=> $query, 'ss' =>$ss] );
     }
     //  Редактирование данных
     //  CMS
@@ -102,5 +131,30 @@ class DirectoriesController extends Controller
         $query = Customer::FindFull();
         return $this->render('customer', ['model' => $model, 'query'=> $query]); 
     }
+    //
+    //  source_site
+    //
+    public function actionSource_site_create()
+    {
+        if (empty($_POST['source_site']['ss_id']))
+          $model = new Source_site();       
+        else
+          $model = Source_site::findOne($_POST['source_site']['ss_id']);                      
+        //
+        $model->ss_url = $_POST['source_site']['ss_url'];
+        $model->ss_dc_id = $_POST['source_site']['ss_dc_id'];
+        $model->ss_descript = $_POST['source_site']['ss_descript'];
+        $model->ss_cust_id = $_POST['source_site']['ss_cust_id'];
+        $model->save();
+       return $this->render('source_site', ['model' => $model] );
+    }
+    
+    public function actionSource_site_del()
+    {
+        $model = new Source_site();       
+        $model->deleteAll('ss_id = '.$_GET['id']);
+        $query = Source_site::FindFull('');      
+        return '....loading';
+    }    
 
 }

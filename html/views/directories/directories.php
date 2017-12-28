@@ -17,5 +17,6 @@ $this->params['breadcrumbs'][] = $this->title;
 echo Html::a('Cms', ['/directories/cms'], ['class' => 'list-group-item list-group-item-action']);
 echo Html::a('Заказчики', ['/directories/customer'], ['class' => 'list-group-item list-group-item-action']);
 echo Html::a('Источники сайтов', ['/directories/source_site'], ['class' => 'list-group-item list-group-item-action']);
+echo Html::a('Результаты анализа сайтов', ['/directories/source_page'], ['class' => 'list-group-item list-group-item-action']);
 ?>
 </div>

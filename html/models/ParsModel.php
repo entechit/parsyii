@@ -19,6 +19,7 @@ class ParsModel extends Model
     public $ss_url;
     public $current_page_body;  // здесь сидит текст анализируемой страницы
     public $current_page_xpath; // структура узлов
+    public $current_page_DOM; // 
     public $sp_id;        // указатель на текущую анализируемую страницу в source_page. Если она = 0 разбор закончен
     public $sp_url;       // адрес текущей страницы
     public $sp_dp_id;     // тип текущей страницы
@@ -87,10 +88,10 @@ class ParsModel extends Model
         $this->ri_img_path     = '../parsdata/';
         $this->result_csv_path = '../parsdata/';
         $this->ri_src_path     = '../source_page/';
-        $this->is_proxy = false;
+        $this->is_proxy = true;
 
-        $this->is_trace = false;
-        $this->trace_cats = array('value','marker');  // memory - контроль памяти  value - контроль значений marker - показываем точку в программе
+        $this->is_trace = true;
+        $this->trace_cats = array('marker','value','pre_func');  // pre_func memory - контроль памяти  value - контроль значений marker - показываем точку в программе
 
 
         $this->counter_dl_img = 0;      // количество скачаных картинок
@@ -286,10 +287,10 @@ $this->add_trace('1. ID : '.$this->sp_id.'   URL : '.$this->sp_url, 'value', __F
       $res = '';
       try {
         $this->current_page_body = $this->file_get_contents_proxy($this->sp_url); 
-        $current_page_DOM = new \DOMDocument();
-        $current_page_DOM->preserveWhiteSpace = false;
-        @$current_page_DOM->loadHTML('<meta http-equiv="content-type" content="text/html; charset=utf-8">' . $this->current_page_body); 
-        $this->current_page_xpath = new \DomXPath($current_page_DOM);
+        $this->current_page_DOM = new \DOMDocument();
+        $this->current_page_DOM->preserveWhiteSpace = false;
+        @$this->current_page_DOM->loadHTML('<meta http-equiv="content-type" content="text/html; charset=utf-8">' . $this->current_page_body); 
+        $this->current_page_xpath = new \DomXPath($this->current_page_DOM);
 
 $this->add_trace('2. ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url , 'value', __FUNCTION__);
         // если ответ в заголовке не 200 ОК значит страница с ошибкой  
@@ -401,7 +402,7 @@ $this->add_trace('12 = '.memory_get_usage(), 'memory', __FUNCTION__);
       // Цикл по типизаторам текущего CMS
 
 
-      $row = Yii::$app->db->createCommand('SELECT pars_rule.pr_selector, pr_count_sub.pr_dp_id dp_id, pr_count_sub.pr_count, pars_rule.pr_id
+      $row = Yii::$app->db->createCommand('SELECT pars_rule.pr_selector, pr_count_sub.pr_dp_id dp_id, pr_count_sub.pr_count, pars_rule.pr_id, pars_rule.pr_pre_function, pars_rule.pr_post_function
             from  
             (select count(pars_rule.pr_id) pr_count, pars_rule.pr_dp_id 
             from pars_rule 
@@ -421,7 +422,7 @@ $this->add_trace('12 = '.memory_get_usage(), 'memory', __FUNCTION__);
        
 
         if (empty($pars_cond['pr_selector'])) continue;
-        
+                
 
         if (($prev_dp_id != $pars_cond['dp_id']) 
             and ($counter_vin == $counter_cond) 
@@ -438,7 +439,15 @@ $this->add_trace('12 = '.memory_get_usage(), 'memory', __FUNCTION__);
 
         if ($prev_dp_id == $pars_cond['dp_id'])   ++ $counter_cond;
 
-              
+
+        // вызываем функцию предобработки
+        if (!empty($pars_cond['pr_pre_function'])) {
+            $pre_func = $pars_cond['pr_pre_function'];
+             if ( method_exists($this,$pre_func))
+                     $this->$pre_func();
+        }
+
+                  
         $expression = sprintf('count(%s) > 0', $pars_cond['pr_selector']);
         if ($this->current_page_xpath->evaluate($expression)) // если есть хоть одно совпадение
         { 
@@ -449,6 +458,15 @@ $this->add_trace('choose_pattern dp_id = 27 pr_id =  '.$pars_cond['pr_id'],'valu
 if ($pars_cond['dp_id']==26){
 $this->add_trace('choose_pattern dp_id = 26  pr_id =  '.$pars_cond['pr_id'],'value', __FUNCTION__);    
 };*/          
+
+        // вызываем функцию ПОСТобработки
+            if (!empty($pars_cond['pr_post_function'])){
+                $post_func = $pars_cond['pr_post_function'];
+                if ( method_exists($this,$post_func))
+                     $this->$post_func();
+            }
+
+
             ++ $counter_vin;            
         };    
         
@@ -617,6 +635,14 @@ $this->add_trace('choose_pattern dp_id = 26  pr_id =  '.$pars_cond['pr_id'],'val
       foreach ($rules_rows_parent->each() as $rules_row_parent) 
       {    
 
+        // вызываем функцию предобработки
+        if (!empty($rules_row_parent['pr_pre_function'])) {
+            $pre_func = $rules_row_parent['pr_pre_function'];
+            if ( method_exists($this,$pre_func))
+                     $this->$pre_func();
+        }
+
+
 $this->add_trace('1 this->sp_url = '.$this->sp_url,'marker', __FUNCTION__);
         $this->pr_parentchild = $rules_row_parent['pr_parentchild'];
 
@@ -696,6 +722,13 @@ $this->add_trace('1 Query selector[pr_selector]'.$selector['pr_selector'],'value
 $this->add_trace(" 2 N Xpath =".$rules_row_sub['pr_selector']."PR_ID = ".$rules_row_sub['pr_id'],'marker', __FUNCTION__);
                     $this->get_node($this->current_page_xpath, $rules_row_sub, $res_node );
                 }
+
+                         // вызываем функцию ПОСТобработки
+                if (!empty($rules_row_sub['pr_post_function'])){
+                     $post_func = $rules_row_sub['pr_post_function'];
+                    if ( method_exists($this,$post_func))
+                     $this->$post_func();
+                }
             }
         }
     }
@@ -744,6 +777,7 @@ $this->add_trace("2 N Xpath =".$selector['pr_selector'],'value', __FUNCTION__);
 
                 if ( $res_titleS->length > 0)  $title = $res_titleS->Item(0)->nodeValue;
 
+$this->add_trace("2.1. IMG N res_srcS =".$res_srcS->Item(0)->nodeValue,'value', __FUNCTION__);
           
 //$this->add_trace('Get Alt and Title: this->sp_id: '.$this->sp_id.' content : '.$full);   
             } else {
@@ -834,6 +868,8 @@ $this->add_trace("4.1.1 dt_id =".$selector['pr_dt_id'],'value', __FUNCTION__);
                     ->execute();
             };
 
+
+
             $this->nodes_name_value =  array('dt_id'=>'','dt_name'=>'','rd_val'=>'');
 
           } elseif ($this->mode_get_node == 'urls') {  // записываем ссылку к прайсу
@@ -887,7 +923,7 @@ $this->add_trace('3.2 ID : '.$this->sp_id.' res_url : '.$res_url,'value', __FUNC
         $res_url = $this->ss_url.'/'.$res_url;
 $this->add_trace('3.2 ID : '.$this->sp_id.' res_url : '.$res_url,'value', __FUNCTION__);
       }
-      elseif (substr($res_url,0,strlen($this->ss_url)) != $this->ss_url) // если внешняя ссылка
+      elseif ((substr($res_url,0,strlen($this->ss_url)) != $this->ss_url) and ($page_type!='img')) // если внешняя ссылка
       {
         $res_url = ''; 
         $page_type = 'other';
@@ -1502,5 +1538,37 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
                         ]) 
              ->execute();
         return $new_id;
+    }
+
+    /**************************************************/
+    // Функции пред и пост обработки данных
+    // функции декларируются в полях pars_rule.pr_pre_function и pars_rule.pr_post_function
+    // Вызываются функции в теле класса
+    /**************************************************/
+
+    /*
+        На странице Амазона выдирает ссылки на большие картинки и добавляет их ссылки вниз страницы
+    */
+    function pre_amazon_jp(){
+        $res_arr = array();
+        preg_match_all('/\"large\":\"(.*?)\"/', $this->current_page_body, $res_arr);
+        
+        //var_dump($res_arr);die;
+
+        foreach ($res_arr[1] as $value) {
+
+    
+                            $this->add_trace('1  url img = '.$value,'pre_func', __FUNCTION__);
+    
+             //$parent = $this->current_page_DOM->getElementById('imgTagWrapperId');
+
+            $img =  $this->current_page_DOM->createElement('img'); 
+            $newnode = $this->current_page_DOM->appendChild($img);  
+            $newnode->setAttribute("class","imglargelist");
+            $newnode->setAttribute("src", $value);
+        }
+
+        //file_put_contents($this->ri_src_path.'Amazon_JP.html', $this->current_page_DOM->saveHTML(), FILE_APPEND);
+        $this->current_page_xpath = new \DomXPath($this->current_page_DOM);
     }
 }

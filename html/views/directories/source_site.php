@@ -12,34 +12,53 @@ use yii\bootstrap\Modal;
 use yii\widgets\ActiveForm;
 use yii\data\ActiveDataProvider;
 use yii\helpers\Url;
+use yii\helpers\ArrayHelper;
 
 
 $this->title = 'Источники сайтов';
 $this->params['breadcrumbs'][] = ['label' => 'Справочники', 'url'=> ['/directories/']];
-$this->params['breadcrumbs'][] = $this->title;
+$title = $this->title;
+if (isset($_GET['customer']))
+  $title .= ' (Заказчик: '. $customer['cust_name']. ' )';
+$this->params['breadcrumbs'][] = $title;
 
 $this->registerJs(
    '$("document").ready(function(){
         $("#new_source_site").on("pjax:end", function() {
-            $.pjax.reload({container:"#cust_list"});  //Reload GridView   
+            $.pjax.reload({container:"#source_site_list"});  //Reload GridView
+            $("#modal").modal("hide");
             $("body").removeClass("modal-open");
             $(".modal-backdrop").remove();
         });
         //
-        $("#new_cms").on("pjax:begin", function() {
-        });      
-
+       
+        $("#source_site_list").on("pjax:end", function() {
+          if (need_update)
+          {          
+            $.pjax.reload({container:"#source_site_list", push: false, replace: false});  //Reload GridView
+            need_update = 0;
+           } 
+        });
+       
+       
     });'
 );
 
 
 echo '
 <script type="text/javascript">
+ var need_update=0;
  function edit_click(id)
  {
    document.getElementById(\'modalHeader\').innerHTML = \'Редактировать\';
    $("#source_site-ss_id").val(id);  
-   $("#source_site-ss_url").val($(\'*[data-key="\'+id+\'"]\').find(\'td:eq(1)\').text());  
+   $("#source_site-ss_url").val($(\'*[data-key="\'+id+\'"]\').find(\'td:eq(1)\').text());
+   $("#source_site-ss_descript").val($(\'*[data-key="\'+id+\'"]\').find(\'td:eq(4)\').text());
+   var cust_name = $(\'*[data-key="\'+id+\'"]\').find(\'td:eq(2)\').text();
+   var cmst_name = $(\'*[data-key="\'+id+\'"]\').find(\'td:eq(3)\').text();
+   $("#source_site-ss_cust_id").find("option:contains("+cust_name+")").prop("selected", true);
+   $("#source_site-ss_dc_id").find("option:contains("+cmst_name+")").prop("selected", true);
+   
    $("#modal").modal("show")
         .find("#modalContent")
         .load($(this).attr("value"));
@@ -52,6 +71,12 @@ echo '
    $("#source_site-ss_id").val("");
    $("#source_site-ss_url").val("");
  }
+ 
+ function del_click()
+ {
+   need_update =1;  
+ }
+ 
 </script>
 ';
 ?>
@@ -79,7 +104,22 @@ Modal::begin([
 <?php $form = ActiveForm::begin(['action' =>['directories/source_site_create'],'id' => 'edit-form', 'options' => ['data-pjax' => true ]] ); ?>
 
  <?= $form->field($model, 'ss_id')->hiddenInput()->label(false) ?>
- <?= $form->field($model, 'ss_url')->textInput(['autofocus' => true])->label('Название') ?>
+ <?= $form->field($model, 'ss_url')->textInput(['autofocus' => true])->label('Url');?>
+ <?= $form->field($model, 'ss_descript')->textarea(['rows' => '2'])->label('Описание');  
+    //
+    $items = ArrayHelper::map($customers,'cust_id','cust_name');
+    $params = [
+        'prompt' => 'Укажите заказчика'
+    ];
+    echo $form->field($model, 'ss_cust_id')->dropDownList($items,$params)->label('Заказчик');
+    //
+    $items = ArrayHelper::map($cms,'dc_id','dc_name');
+    $params = [
+        'prompt' => 'Укажите Cms'
+    ];
+    echo $form->field($model, 'ss_dc_id')->dropDownList($items,$params)->label('Cms');
+    //
+  ?>
 
 
  <div class="form-group">
@@ -92,7 +132,7 @@ Modal::begin([
 Pjax::end(); ?>
 
 
-<?php Pjax::begin(['id' => 'source_site_list']);
+<?php Pjax::begin(['id' => 'source_site_list', 'enablePushState' => false]);
 
 
         $dataProvider = new ActiveDataProvider([
@@ -115,6 +155,10 @@ Pjax::end(); ?>
                 'desc' => ['dc_name' => SORT_DESC],
             ],
             'ss_descript',
+            'pagesCount' => [
+                'asc' => ['pagesCount' => SORT_ASC],
+                'desc' => ['pagesCount' => SORT_DESC],
+            ],            
             'ss_dateadd',
           ]
         ]);
@@ -144,23 +188,21 @@ echo GridView::widget([
         'label' => 'Описание',
     ],
     [
-        'attribute' => 'ss_dateadd',
-        'label' => 'Дата добавления',
-    ]
-    	
-    ,
-    /*
-    [
-        'attribute' => 'sitesCount',
-        'label' => 'Количество сайтов',
+        'attribute' => 'pagesCount',
+        'label' => 'Количество страниц',
         'value' => function ($data) {
-            return Html::a(Html::encode($data->sitesCount), Url::to(['source_site', 'customer' => $data->cust_id]));
+            return Html::a(Html::encode($data->pagesCount), Url::to(['source_page', 'ss' => $data->ss_id]), ['data-pjax' => '0']);
         },
         'format' => 'raw',
     ],
-    */
+    [
+        'attribute' => 'ss_dateadd',
+        'label' => 'Дата добавления',
+    ]   	
+    ,    
+ 
          
-         [/*
+         [
             'class' => 'yii\grid\ActionColumn',
             'header'=>'Действия', 
             'headerOptions' => ['width' => '60'],
@@ -168,22 +210,23 @@ echo GridView::widget([
          
             'buttons' => [
                     'delete' => function ($url, $model, $key) {
-                        return Html::a('<span class="glyphicon glyphicon-trash"></span>', ['/directories/customer_del', 'id' => $key], [
+                        return Html::a('<span class="glyphicon glyphicon-trash"></span>', ['/directories/source_site_del', 'id' => $key], [
                             'title' => Yii::t('yii', 'Delete'),
-                            'data-pjax' => '#cms_list',
+                            'data-confirm'=>"Хотите удалить?",
+                            'data-pjax' => '1',
+                            'onclick'=>"return del_click()",
                         ]);
                     },
                     'update' => function ($url, $model, $key) {
                         return Html::a('<span class="glyphicon glyphicon-pencil"></span>', ['#'], [
                             'title' => Yii::t('yii', 'Update'),
                             'data-pjax' => '#model-grid',
-                            'onclick'=>"return edit_click($key)",
+                            'onclick'=>"return edit_click($key)",                       
                         ]
                       );
                     },
                     
-                ],
-                */
+                ],                
         ],
          
     ],

@@ -34,3 +34,9 @@ Select ei.ei_product_id as product_id, '' as attribute_group, dt.dt_name as attr
             and ei.ei_ec_id = 3
             and rd.rd_dt_id in (Select eltf_dt_id from  export_link_tag_field WHERE eltf_ec_id = 5)
 limit 100000
+
+
+
+
+INSERT INTO `parsyii`.`source_page` (`sp_ss_id`, `sp_url` ) VALUES ();
+
