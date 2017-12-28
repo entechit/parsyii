@@ -88,7 +88,7 @@ class ParsModel extends Model
         $this->ri_img_path     = '../parsdata/';
         $this->result_csv_path = '../parsdata/';
         $this->ri_src_path     = '../source_page/';
-        $this->is_proxy = true;
+        $this->is_proxy = false;
 
         $this->is_trace = true;
         $this->trace_cats = array('marker','value','pre_func');  // pre_func memory - контроль памяти  value - контроль значений marker - показываем точку в программе
