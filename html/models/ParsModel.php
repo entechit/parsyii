@@ -346,7 +346,7 @@ $this->add_trace('5 = '.memory_get_usage(), 'memory', __FUNCTION__);
 $this->add_trace('6 = '.memory_get_usage(), 'memory', __FUNCTION__);
 //$this->add_trace('seek_urls 2 ID : '.$this->sp_id.' res_url : '.$res_url);          
             // если мы сюда дошли, значит есть ссылка для сохранения
-            if (!empty($res_url))
+            if (!empty($res_url) and ($res_arr[1]=='html'))
             {
 $this->add_trace('7 = '.memory_get_usage(), 'memory', __FUNCTION__);
                 try {
@@ -355,20 +355,14 @@ $this->add_trace('7 = '.memory_get_usage(), 'memory', __FUNCTION__);
                                 ["sp_ss_id" => $this->ss_id,
                                 "sp_url" => $res_url,]) 
                              ->execute();
-$this->add_trace('8 = '.memory_get_usage(), 'memory', __FUNCTION__);
-                    ++ $this->counter_add_pages;
-$this->add_trace('9 = '.memory_get_usage(), 'memory', __FUNCTION__);                    
 
+                    ++ $this->counter_add_pages;
                 }  catch(\yii\db\Exception $e) {
 $this->add_trace('10 = '.memory_get_usage(), 'memory', __FUNCTION__);
                 };
             };
         };
 
-        /*$nodes=null;
-        unset($nodes);
-        $res_url = null;
-        unset($res_url);*/
 $this->add_trace('11 = '.memory_get_usage(), 'memory', __FUNCTION__);
         // помечаем, что из этой страницы уже выняты все ссылки
           Yii::$app->db->createCommand()
@@ -624,6 +618,7 @@ $this->add_trace('choose_pattern dp_id = 26  pr_id =  '.$pars_cond['pr_id'],'val
     //*********************************************************************
     function get_content()
     {
+        if (empty($this->sp_dp_id)) return;
       // цикл по корневым правилам
       $rules_rows_parent = (new \yii\db\Query())
             ->select(['pars_rule.*', 'dir_tags.dt_rd_field', 'dir_tags.dt_is_img',])
@@ -898,6 +893,12 @@ $this->add_trace('1 ID : '.$this->sp_id.' res_url : '.$res_url,'value', __FUNCTI
         $page_type = 'img';
 $this->add_trace('2.1 ID : '.$this->sp_id.' res_url : '.$res_url,'value', __FUNCTION__);
       } 
+      elseif (stristr($res_url, '.zip') or stristr($res_url, '.gz') or stristr($res_url, '.7zip')) {
+        $page_type = 'arj';
+      }
+       elseif (stristr($res_url, '.doc') or stristr($res_url, '.pdf') or stristr($res_url, '.xls')) {
+        $page_type = 'doc';
+      }
       elseif (( substr($res_url,0,1) == '#') or (empty($res_url)))
       {
 $this->add_trace('2.2 ID : '.$this->sp_id.' res_url : '.$res_url,'value', __FUNCTION__);
