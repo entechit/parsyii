@@ -12,6 +12,7 @@ use app\models\ContactForm;
 use app\models\SourceSiteForm;
 use app\models\ParsModel;
 use app\models\Cms;
+use app\models\Page_cms;
 use app\models\Customer;
 use app\models\Source_site;
 use app\models\Source_page;
@@ -60,24 +61,24 @@ class DirectoriesController extends Controller
     
     public function actionSource_page()
     {
-      $ss ='';
-      $ss_id ='';
-    //    echo '!'.$_GET['ss'];
-        if (isset($_GET['ss']))
+        $ss ='';
+        $ss_id ='';
+        //
+        if (isset($_GET['sp_ss_id']))
         {
-          $ss_id = $_GET['ss'];
+          $ss_id = $_GET['sp_ss_id'];
           $ss = source_site::findOne($ss_id);                 
         }
         //  
         
-       // $customers = Customer::find()->all();
-        //$cms = Cms::find()->all();
+        $sites = source_site::find()->all();
+        $page_cms = Page_cms::find()->all();
         
-     
+        //
         $query = source_page::FindFull($ss_id);
         $model = new source_page();
         
-        return $this->render('source_page', ['model' => $model, 'query'=> $query, 'ss' =>$ss] );
+        return $this->render('source_page', ['model' => $model, 'query'=> $query, 'ss' =>$ss, 'sites' => $sites, 'page_cms' => $page_cms] );
     }
     //  Редактирование данных
     //  CMS
@@ -155,6 +156,32 @@ class DirectoriesController extends Controller
         $model->deleteAll('ss_id = '.$_GET['id']);
         $query = Source_site::FindFull('');      
         return '....loading';
-    }    
+    }
+    //
+    //  source_page
+    //
+    public function actionSource_page_create()
+    {
+        if (empty($_POST['source_page']['sp_id']))
+          $model = new Source_page();       
+        else
+          $model = Source_page::findOne($_POST['source_page']['sp_id']);                      
+        //
+        $model->sp_url = $_POST['source_page']['sp_url'];
+        $model->sp_ss_id = $_POST['source_page']['sp_ss_id'];
+        $model->sp_dp_id = $_POST['source_page']['sp_dp_id'];
+        $model->sp_parsed = $_POST['source_page']['sp_parsed'];
+        $model->sp_errors = $_POST['source_page']['sp_errors'];
+        $model->save();
+       return $this->render('source_page', ['model' => $model] );
+    }
+    
+    public function actionSource_page_del()
+    {
+        $model = new Source_page();       
+        $model->deleteAll('sp_id = '.$_GET['id']);
+        $query = Source_page::FindFull('');      
+        return '....loading';
+    }      
 
 }

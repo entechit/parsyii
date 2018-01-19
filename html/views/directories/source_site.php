@@ -191,7 +191,7 @@ echo GridView::widget([
         'attribute' => 'pagesCount',
         'label' => 'Количество страниц',
         'value' => function ($data) {
-            return Html::a(Html::encode($data->pagesCount), Url::to(['source_page', 'ss' => $data->ss_id]), ['data-pjax' => '0']);
+            return Html::a(Html::encode($data->pagesCount), Url::to(['source_page', 'sp_ss_id' => $data->ss_id]), ['data-pjax' => '0']);
         },
         'format' => 'raw',
     ],

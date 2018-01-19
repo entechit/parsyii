@@ -88,7 +88,7 @@ class ParsModel extends Model
         $this->ri_img_path     = '../parsdata/';
         $this->result_csv_path = '../parsdata/';
         $this->ri_src_path     = '../source_page/';
-        $this->is_proxy = true;
+        $this->is_proxy = false;
 
         $this->is_trace = false;
         $this->trace_cats = array('marker','value','pre_func');  // pre_func memory - контроль памяти  value - контроль значений marker - показываем точку в программе
@@ -289,7 +289,7 @@ $this->add_trace('1. ID : '.$this->sp_id.'   URL : '.$this->sp_url, 'value', __F
         $this->current_page_body = $this->file_get_contents_proxy($this->sp_url); 
         $this->current_page_DOM = new \DOMDocument();
         $this->current_page_DOM->preserveWhiteSpace = false;
-        @$this->current_page_DOM->loadHTML('<meta http-equiv="content-type" content="text/html; charset=utf-8">' . $this->current_page_body); 
+        @$this->current_page_DOM->loadHTML('<meta http-equiv="content-type" content="text/html;">' . $this->current_page_body); //  charset=utf-8
         $this->current_page_xpath = new \DomXPath($this->current_page_DOM);
 
 $this->add_trace('2. ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url , 'value', __FUNCTION__);
@@ -401,11 +401,11 @@ $this->add_trace('12 = '.memory_get_usage(), 'memory', __FUNCTION__);
             (select count(pars_rule.pr_id) pr_count, pars_rule.pr_dp_id 
             from pars_rule 
             LEFT JOIN  dir_page_cms on pars_rule.pr_dp_id = dir_page_cms.dp_id
-            where dir_page_cms.dp_dc_id = :dp_dc_id and pars_rule.pr_dt_id = 1
+            where dir_page_cms.dp_dc_id = :dp_dc_id and pars_rule.pr_dt_id = 1 and pars_rule.pr_disable = 0
             group by pars_rule.pr_dp_id
             ) pr_count_sub
             LEFT JOIN  pars_rule on pars_rule.pr_dp_id = pr_count_sub.pr_dp_id
-            where pars_rule.pr_dt_id = 1
+            where pars_rule.pr_dt_id = 1 and pars_rule.pr_disable = 0
             order by pr_count_sub.pr_count desc, pr_count_sub.pr_dp_id desc')
            ->bindValue(':dp_dc_id',$this->dc_id)
            ->queryAll();
@@ -524,7 +524,7 @@ $this->add_trace('choose_pattern dp_id = 26  pr_id =  '.$pars_cond['pr_id'],'val
        
         ini_set('max_execution_time', 0);
             // возвращаем содержимое страницы с прокси параметрами или нет
-        $res = file_get_contents($url,false,$ctx); 
+        $res = file_get_contents(str_replace(' ','%20',$url),false,$ctx); 
         $this->HTTP_status = $http_response_header[0];
  
         return $res;
@@ -624,7 +624,8 @@ $this->add_trace('choose_pattern dp_id = 26  pr_id =  '.$pars_cond['pr_id'],'val
             ->select(['pars_rule.*', 'dir_tags.dt_rd_field', 'dir_tags.dt_is_img',])
             ->from('pars_rule')
             ->join('LEFT JOIN', 'dir_tags', 'pars_rule.pr_dt_id = dir_tags.dt_id')
-            ->where('pars_rule.pr_dp_id = :pr_dp_id and (pars_rule.pr_id_parent is null or pars_rule.pr_id_parent="") and pars_rule.pr_dt_id <> 1')
+            ->where('pars_rule.pr_dp_id = :pr_dp_id and (pars_rule.pr_id_parent is null or pars_rule.pr_id_parent="") and pars_rule.pr_dt_id <> 1 and pars_rule.pr_disable = 0')
+            ->orderBy('pars_rule.pr_id')
             ->addParams([':pr_dp_id'=>$this->sp_dp_id]);
 
       foreach ($rules_rows_parent->each() as $rules_row_parent) 
@@ -691,7 +692,7 @@ $this->add_trace("0 get_query Xpath Ошибка построения query",'ma
                   ->select(['pars_rule.*', 'dir_tags.dt_rd_field', 'dir_tags.dt_is_img',])
                   ->from('pars_rule')
                   ->join('LEFT JOIN', 'dir_tags', 'pars_rule.pr_dt_id = dir_tags.dt_id')
-                  ->where('pars_rule.pr_dp_id = :pr_dp_id and pars_rule.pr_id_parent = :pr_id and (pars_rule.pr_dt_id <> 1 or pars_rule.pr_dt_id is null)')
+                  ->where('pars_rule.pr_dp_id = :pr_dp_id and pars_rule.pr_id_parent = :pr_id and (pars_rule.pr_dt_id <> 1 or pars_rule.pr_dt_id is null) and pars_rule.pr_disable = 0')
                   ->addParams([':pr_dp_id' => $this->sp_dp_id,
                                ':pr_id'    => $selector['pr_id'],]);
 
@@ -772,7 +773,7 @@ $this->add_trace("2 N Xpath =".$selector['pr_selector'],'value', __FUNCTION__);
 
                 if ( $res_titleS->length > 0)  $title = $res_titleS->Item(0)->nodeValue;
 
-$this->add_trace("2.1. IMG N res_srcS =".$res_srcS->Item(0)->nodeValue,'value', __FUNCTION__);
+//$this->add_trace("2.1. IMG N res_srcS =".$res_srcS->Item(0)->nodeValue,'value', __FUNCTION__);
           
 //$this->add_trace('Get Alt and Title: this->sp_id: '.$this->sp_id.' content : '.$full);   
             } else {
@@ -795,7 +796,7 @@ $this->add_trace("3 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node,'valu
             };
 
         // если это картинка, то вынимаем параметры alt и title
-
+        
         if ($selector['dt_is_img']){
           $res_arr = $this->adjust_URL($val); // дописываем домен
           $val = $res_arr[0];  
@@ -1097,7 +1098,7 @@ $this->add_trace('3.2 ID : '.$this->sp_id.' res_url : '.$res_url,'value', __FUNC
             $this->url_per_price_counter = 0; // Количество вариантов сохраняемых карточек, если найдено несколько ссылок
 
 
-$this->add_trace('1 Cust_id : '.$this->cust_id.'   Наименование : '.$price_row['price_modelname'],'value', __FUNCTION__);
+//$this->add_trace('1 Cust_id : '.$this->cust_id.'   Наименование : '.$price_row['price_modelname'],'value', __FUNCTION__);
             $this->price_id = $price_row['price_id'];
 
            // формируем ссылку поиска
@@ -1107,19 +1108,19 @@ $this->add_trace('1 Cust_id : '.$this->cust_id.'   Наименование : '.
                 $search_string = $price_row['price_modelcode'];
             };
 
-$this->add_trace('2 search_string = '.$search_string,'value', __FUNCTION__);
+//$this->add_trace('2 search_string = '.$search_string,'value', __FUNCTION__);
             // формируем строку поиска по маске конкретного каталога 
             $search_url=sprintf($this->searchmask, $this->space2plus($search_string), $this->pager_page_n);
-$this->add_trace('3 search_url = '.$search_url,'value', __FUNCTION__);
+//$this->add_trace('3 search_url = '.$search_url,'value', __FUNCTION__);
             // инициализируем переменную ссылкой
             $this->sp_url = $search_url;
-$this->add_trace('4 insert_price_ulr_list this->sp_url = '.$this->sp_url,'value', __FUNCTION__);
+//$this->add_trace('4 insert_price_ulr_list this->sp_url = '.$this->sp_url,'value', __FUNCTION__);
             // выгребаем страницу
             $this->get_page();
-$this->add_trace('5 insert_price_ulr_list this->sp_url = '.$this->sp_url,'value', __FUNCTION__);
+//$this->add_trace('5 insert_price_ulr_list this->sp_url = '.$this->sp_url,'value', __FUNCTION__);
             // выгрбаем через селекторы все ссылки 
             $this->get_content();
-$this->add_trace('7 insert_price_ulr_list this->sp_url = '.$this->sp_url,'value', __FUNCTION__);
+//$this->add_trace('7 insert_price_ulr_list this->sp_url = '.$this->sp_url,'value', __FUNCTION__);
             ++ $this->counter_made_price_row;
         };
     }
@@ -1571,5 +1572,23 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
 
         //file_put_contents($this->ri_src_path.'Amazon_JP.html', $this->current_page_DOM->saveHTML(), FILE_APPEND);
         $this->current_page_xpath = new \DomXPath($this->current_page_DOM);
+    }
+
+
+        /*
+        На странице Маринклаб заменяет теги UL на P и LI  на "- "А также перекодирует страницу в UTF-8 
+    */
+    function pre_marineclub_decod(){
+
+       // $this->current_page_body = mb_convert_encoding($this->current_page_body,'UTF-8');
+        $this->current_page_body = str_ireplace( '<ul', '<p', $this->current_page_body);
+        $this->current_page_body = str_ireplace( '</ul>', '</p>', $this->current_page_body);
+        $this->current_page_body = str_ireplace( '<li', '- ', $this->current_page_body);
+        $this->current_page_body = str_ireplace( '</li>', '<br>', $this->current_page_body);
+        $this->current_page_body = str_ireplace( '<ol', '<p', $this->current_page_body);
+        $this->current_page_body = str_ireplace( '</ol>', '</p>', $this->current_page_body);
+        @$this->current_page_DOM->loadHTML($this->current_page_body); // 
+        $this->current_page_xpath = new \DomXPath($this->current_page_DOM);
+
     }
 }

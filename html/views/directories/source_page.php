@@ -13,29 +13,30 @@ use yii\widgets\ActiveForm;
 use yii\data\ActiveDataProvider;
 use yii\helpers\Url;
 use yii\helpers\ArrayHelper;
+use app\models\Source_pageSearch;
 
 
 $this->title = 'Результаты анализа сайтов';
 $this->params['breadcrumbs'][] = ['label' => 'Справочники', 'url'=> ['/directories/']];
 $title = $this->title;
-if (isset($_GET['ss']))
-  $title .= ' (Источник: '. $ss['ss_url']. ' )';
+if (isset($_GET['sp_ss_id']))
+  $title .= ' (Сайт: '. $ss['ss_url']. ' )';
 $this->params['breadcrumbs'][] = $title;
 
 $this->registerJs(
    '$("document").ready(function(){
-        $("#new_source_site").on("pjax:end", function() {
-            $.pjax.reload({container:"#source_site_list"});  //Reload GridView
+        $("#new_source_page").on("pjax:end", function() {
+            $.pjax.reload({container:"#source_page_list"});  //Reload GridView
             $("#modal").modal("hide");
             $("body").removeClass("modal-open");
             $(".modal-backdrop").remove();
         });
         //
        
-        $("#source_site_list").on("pjax:end", function() {
+        $("#source_page_list").on("pjax:end", function() {
           if (need_update)
           {          
-            $.pjax.reload({container:"#source_site_list", push: false, replace: false});  //Reload GridView
+            $.pjax.reload({container:"#source_page_list", push: false, replace: false});  //Reload GridView
             need_update = 0;
            } 
         });
@@ -48,16 +49,31 @@ $this->registerJs(
 echo '
 <script type="text/javascript">
  var need_update=0;
- function edit_click(id)
+ function edit_click(id, new_page)
  {
-   document.getElementById(\'modalHeader\').innerHTML = \'Редактировать\';
-   $("#source_site-ss_id").val(id);  
-   $("#source_site-ss_url").val($(\'*[data-key="\'+id+\'"]\').find(\'td:eq(1)\').text());
-   $("#source_site-ss_descript").val($(\'*[data-key="\'+id+\'"]\').find(\'td:eq(4)\').text());
-   var cust_name = $(\'*[data-key="\'+id+\'"]\').find(\'td:eq(2)\').text();
-   var cmst_name = $(\'*[data-key="\'+id+\'"]\').find(\'td:eq(3)\').text();
-   $("#source_site-ss_cust_id").find("option:contains("+cust_name+")").prop("selected", true);
-   $("#source_site-ss_dc_id").find("option:contains("+cmst_name+")").prop("selected", true);
+   
+   if(new_page)
+   {
+     $("#source_page-sp_id").val("");
+      document.getElementById(\'modalHeader\').innerHTML = \'Копировать\';
+   }
+   else
+   {
+     $("#source_page-sp_id").val(id);
+     document.getElementById(\'modalHeader\').innerHTML = \'Редактировать\';
+   }  
+   //
+   $("#source_page-sp_url").val($(\'*[data-key="\'+id+\'"]\').find(\'td:eq(3)\').text());
+  
+   var site_name = $(\'*[data-key="\'+id+\'"]\').find(\'td:eq(2)\').text();
+   var page_name = $(\'*[data-key="\'+id+\'"]\').find(\'td:eq(5)\').text();
+   $("#source_page-sp_ss_id").find("option:contains("+site_name+")").prop("selected", true);
+   $("#source_page-sp_dp_id").find("option:contains("+page_name+")").prop("selected", true);
+  
+   var sp_parsed = $(\'*[data-key="\'+id+\'"]\').find(\'td:eq(6)\').text();  
+   $("#source_page-sp_parsed [value="+sp_parsed+"]").attr("selected", "selected");
+   
+   $("#source_page-sp_errors").val($(\'*[data-key="\'+id+\'"]\').find(\'td:eq(8)\').text());
    
    $("#modal").modal("show")
         .find("#modalContent")
@@ -68,8 +84,8 @@ echo '
  function add_click()
  {
    document.getElementById(\'modalHeader\').innerHTML = \'Добавить\';
-   $("#source_site-ss_id").val("");
-   $("#source_site-ss_url").val("");
+   $("#source_page-ss_id").val("");
+   $("#source_page-ss_url").val("");
  }
  
  function del_click()
@@ -87,11 +103,11 @@ echo '
     <h1><?= Html::encode($this->title) ?></h1>    
 </div>
 
-<?php Pjax::begin(['id' => 'new_source_site', 'enablePushState' => false]); ?>    
+<?php Pjax::begin(['id' => 'new_source_page', 'enablePushState' => false]); ?>    
 <?php
 Modal::begin([
 'id' => 'modal',
-'header' => '<h2><span id="modalHeader">Добавить</span> источник сайта</h2>',
+'header' => '<h2><span id="modalHeader">Добавить</span> результат анализа сайта</h2>',
 'toggleButton' => ['label' => 'Добавить',
                    'tag' => 'button',
                    'class' => 'btn btn-success',
@@ -105,21 +121,26 @@ Modal::begin([
 
  <?= $form->field($model, 'sp_id')->hiddenInput()->label(false) ?>
  <?= $form->field($model, 'sp_url')->textInput(['autofocus' => true])->label('Url');
- /*
+ 
     //
-    $items = ArrayHelper::map($customers,'cust_id','cust_name');
+    $items = ArrayHelper::map($sites,'ss_id','ss_url');
     $params = [
-        'prompt' => 'Укажите заказчика'
+        'prompt' => 'Укажите сайт'
     ];
-    echo $form->field($model, 'ss_cust_id')->dropDownList($items,$params)->label('Заказчик');
-    //
-    $items = ArrayHelper::map($cms,'dc_id','dc_name');
+    echo $form->field($model, 'sp_ss_id')->dropDownList($items,$params)->label('Сайт');
+    // 
+    $items = ArrayHelper::map($page_cms,'dp_id','dp_name');
     $params = [
-        'prompt' => 'Укажите Cms'
+        'prompt' => 'Укажите тип страницы'
     ];
-    echo $form->field($model, 'ss_dc_id')->dropDownList($items,$params)->label('Cms');
-    */
+    echo $form->field($model, 'sp_dp_id')->dropDownList($items,$params)->label('Тип страницы');
+   //
+    $items = [0 => 'нет', 1 => 'да'];
+    $params = [];
+    echo $form->field($model, 'sp_parsed')->dropDownList($items,$params)->label('Проанализирована');
     //
+    echo $form->field($model, 'sp_errors')->textarea(['rows' => '4'])->label('Ошибки');  
+    
   ?>
 
 
@@ -133,15 +154,18 @@ Modal::begin([
 Pjax::end(); ?>
 
 
-<?php Pjax::begin(['id' => 'source_site_list', 'enablePushState' => false]);
+<?php Pjax::begin(['id' => 'source_page_list', 'enablePushState' => false]);
 
-
+$searchModel = new Source_pageSearch();
+$dataProvider = $searchModel->search(Yii::$app->request->get());
+/*
         $dataProvider = new ActiveDataProvider([
           'query' => $query,
           'pagination' => [
             'pageSize' => 20,
           ],
-        ]);       
+        ]);
+  */      
         //
         /*
         $dataProvider->setSort([
@@ -168,6 +192,8 @@ Pjax::end(); ?>
         
 echo GridView::widget([
     'dataProvider' => $dataProvider,
+    'filterModel' => $searchModel,
+     
     'columns' => [
     [
         'attribute' => 'sp_id',
@@ -176,15 +202,24 @@ echo GridView::widget([
     [
         'attribute' => 'sp_ss_id',
         'label' => 'Код сайта',
-    ],    
+    ],
+         [
+        'attribute' => 'ss_url',
+        'label' => 'Сайт',       
+        //'format' => 'raw',
+    ],
     [
         'attribute' => 'sp_url',
         'label' => 'url',
     ],
     [
         'attribute' => 'sp_dp_id',
-        'label' => 'Тип страницы',
+        'label' => 'Тип страницы id',
     ],
+    [
+        'attribute' => 'dp_name',
+        'label' => 'Тип страницы',
+    ],    
     [
         'attribute' => 'sp_parsed',
         'label' => 'Страница проанализирована',
@@ -192,52 +227,49 @@ echo GridView::widget([
     [
         'attribute' => 'sp_datetimeadd',
         'label' => 'Дата добавления',
-    ],
-  
-  /*
-     [
-        'attribute' => 'pagesCount',
-        'label' => 'Количество страниц',
-        'value' => function ($data) {
-            return Html::a(Html::encode($data->pagesCount), Url::to(['source_page', 'ss' => $data->ss_id]));
-        },
-        'format' => 'raw',
-    ],
-    */
+    ], 
+
     [
         'attribute' => 'sp_errors',
         'label' => 'Ошибки',
     ]   	
     ,    
  
-         /*
+         
          [
             'class' => 'yii\grid\ActionColumn',
             'header'=>'Действия', 
             'headerOptions' => ['width' => '60'],
-            'template' => '{update} {delete}',
+            'template' => '{update} {copy} {delete}',
          
             'buttons' => [
                     'delete' => function ($url, $model, $key) {
-                        return Html::a('<span class="glyphicon glyphicon-trash"></span>', ['/directories/source_site_del', 'id' => $key], [
+                        return Html::a('<span class="glyphicon glyphicon-trash"></span>', ['/directories/source_page_del', 'id' => $key], [
                             'title' => Yii::t('yii', 'Delete'),
                             'data-confirm'=>"Хотите удалить?",
                             'data-pjax' => '1',
                             'onclick'=>"return del_click()",
                         ]);
                     },
+                    'copy' => function ($url, $model, $key) {
+                        return Html::a('<span class="glyphicon glyphicon-copy"></span>', ['#'], [
+                            'title' => Yii::t('yii', 'Copy'),
+                            'data-pjax' => '#model-grid',
+                            'onclick'=>"return edit_click($key, 1)",
+                        ]
+                      );
+                    },                   
                     'update' => function ($url, $model, $key) {
                         return Html::a('<span class="glyphicon glyphicon-pencil"></span>', ['#'], [
                             'title' => Yii::t('yii', 'Update'),
                             'data-pjax' => '#model-grid',
-                            'onclick'=>"return edit_click($key)",
+                            'onclick'=>"return edit_click($key, 0)",
                         ]
                       );
                     },
                     
                 ],                
-        ],
-         */
+        ],         
     ],
 ]);
 
