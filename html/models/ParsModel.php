@@ -1391,17 +1391,17 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
                                             $this->add_trace('3','marker', __FUNCTION__); 
         $this->outputs_csv_nparam = 0;
 
-        $exp_fields = (new \yii\db\Query())
+        $exp_field_name = (new \yii\db\Query())
             ->select(['ecf.ecf_field', 'ed.ed_value'])
             ->from('export_cms_field ecf')
-            ->join('left join', 'export_defaults ed', 'ed.ed_ecf_id = ecf.ecf_id')
-            ->where('ecf.ecf_ec_id = :ec_id and (ed.ed_ss_id = :ss_id or ed.ed_ss_id is null)')
+            ->join('left join', '(Select *  from export_defaults Where ed_ss_id =:ss_id) ed', 'ed.ed_ecf_id = ecf.ecf_id')
+            ->where('ecf.ecf_ec_id = :ec_id')
             ->addParams([':ec_id' => $this->ec_id,
                          ':ss_id' => $this->ss_id,])
             ->orderBy(['ecf.ecf_id' => SORT_ASC])
             ->all();   
 
-        foreach ($exp_fields as $value) {
+        foreach ($exp_field_name as $value) {
             ++ $this->outputs_csv_nparam;
                 // Добавляем все поля в выходной массив 
             $this->outputs_csv[0][$this->outputs_csv_nparam-1] = trim($value['ecf_field']);
@@ -1416,6 +1416,7 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
 
     // чтобы можно было один тег повторить в нескольких полях
     function put_element_to_output($tag_id, $val){
+        reset($this->exp_fields);
         foreach ($this->exp_fields as $exp_fields) {
           if ($exp_fields['eltf_dt_id'] == $tag_id) $this->put_element_to_output_sub($tag_id, $val, $exp_fields);
         }
