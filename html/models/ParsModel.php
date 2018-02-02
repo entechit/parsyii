@@ -73,6 +73,7 @@ class ParsModel extends Model
     public $export_start_id; // стартовый номер для нумерации
     public $export_ec_id; // куда смотрим для нумерации
     public $export_ec_datastruct; // Признак структуры результирующего файла s - одно данное - одна строка / m - все что угодно
+    public $ec_img_path;
 
     public $result_csv_path;
     public $ec_id;
@@ -88,10 +89,10 @@ class ParsModel extends Model
         $this->ri_img_path     = '../parsdata/';
         $this->result_csv_path = '../parsdata/';
         $this->ri_src_path     = '../source_page/';
-        $this->is_proxy = false;
+        $this->is_proxy = true;
 
         $this->is_trace = false;
-        $this->trace_cats = array('marker','value','pre_func');  // pre_func memory - контроль памяти  value - контроль значений marker - показываем точку в программе
+        $this->trace_cats = array(/*'marker',*/'value'/*,'pre_func'*/);  // pre_func memory - контроль памяти  value - контроль значений marker - показываем точку в программе
 
 
         $this->counter_dl_img = 0;      // количество скачаных картинок
@@ -279,6 +280,16 @@ $this->add_trace('1. ID : '.$this->sp_id.'   URL : '.$this->sp_url, 'value', __F
         and ($this->cb_type_source_page == 0)
         and ($this->cb_download_page == 0)
         and ($this->cb_pars_source_page == 0) ) {
+        return 'continue';
+    }
+
+    /* только для типизации только не типизированные */
+     if ( ($this->cb_find_internal_url == 0)
+        and ($this->sp_seek_urls==0)
+        and ($this->cb_type_source_page == 1)
+        and ($this->cb_download_page == 0)
+        and ($this->cb_pars_source_page == 0) 
+        and (!empty($this->sp_dp_id)) ) {
         return 'continue';
     }
     /* END блок условий, когда страницу качать не нужно*/
@@ -495,13 +506,13 @@ $this->add_trace('choose_pattern dp_id = 26  pr_id =  '.$pars_cond['pr_id'],'val
             $opts = array( 
                 'http' => array ( 
                     'method'=>'GET', 
-                    'proxy'=>'proxy.home.entecheco.com:3128', 
+                    'proxy'=>'entecheco.com:3128', 
                     'request_fulluri' => true, 
                     'header'=> array("Proxy-Authorization: Basic $auth", "Authorization: Basic $auth") 
                 ), 
                 'https' => array ( 
                     'method'=>'GET', 
-                    'proxy'=>'proxy.home.entecheco.com:3128', 
+                    'proxy'=>'entecheco.com:3128', 
                     'request_fulluri' => true, 
                     'header'=> array("Proxy-Authorization: Basic $auth", "Authorization: Basic $auth") 
                 ),
@@ -1223,8 +1234,8 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
         $fname='';
         // В цикле выбираем варианты экспорта, которые будем выполнять
         $exp_source_format  = Yii::$app->db->createCommand('SELECT ec.ec_id, ec.ec_file_prefix,'.
-            ' ec.ec_datastruct, t.ec_id root_id, t.ec_id_start_n start_id '.
-                ' from export_customer ec '.
+            ' ec.ec_datastruct, t.ec_id root_id, t.ec_id_start_n start_id, ec.ec_img_path '.
+                ' FROM export_customer ec '.
                 ' INNER JOIN export_customer t on ec.ec_root_id_ec_id=t.ec_id '.
                         ' where exists (Select 1 from export_link_tag_field eltf '.
                                 ' where eltf.eltf_ec_id = ec.ec_id) and ec.ec_cust_id = :cust_id')
@@ -1243,6 +1254,7 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
             $this->ec_id = $value['ec_id'];
             $this->export_start_id =  $value['start_id'];
             $this->export_ec_id = $value['root_id'];
+            $this->ec_img_path = $value['ec_img_path'];
             $this->export_ec_datastruct = $value['ec_datastruct'];;
 
             // имя получаемого файла
@@ -1288,7 +1300,7 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
         
         // идем по страницам источникам
         foreach ($exp_source_page as $root_value) {
-                                                    $this->add_trace('2.3 root_value[rd_sp_id] = '.$root_value['rd_sp_id'],'value', __FUNCTION__);
+                                                    $this->add_trace('2.3 root_value[rd_sp_id] = '.$root_value['rd_sp_id'] . '  eltf_ec_id = '.$this->ec_id ,'value', __FUNCTION__);
             // внутри делаем выборку всех характеристик с одной страницы
             $exp_parent_items = (new \yii\db\Query())
                 ->select(['rd.*', 'ri.ri_img_path', 'dt.dt_is_img','dt.dt_rd_field', 'ri.ri_img_name', 'ri_img_path'])
@@ -1304,9 +1316,23 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
                              ':eltf_ec_id' => $this->ec_id,])
                 ->all();
 
+            // только для категорий PrestaShop
+            if  ($this->ec_id == 2){
+                $this->exp_append();
+                foreach ( $exp_parent_items as $p_value) {
+                    $this->put_element_to_output(0, $this->get_id($root_value['sp_url'], 0)); // втыкаем ID товара
+                    if ($p_value['dt_is_img']=='1') // если изображение
+                    {
+                                                        $this->add_trace('2.5 p_value rd_dt_id = '.$p_value['rd_dt_id'],'value', __FUNCTION__); 
+                                                        $this->add_trace('2.5.1 p_value ec_id = '.$this->ec_id,'value', __FUNCTION__); 
+                        $this->put_element_to_output($p_value['rd_dt_id'], $this->ec_img_path.'/'.$this->ss_id. '/'.$p_value['ri_img_name']);
+                    } else {
+                        $this->put_element_to_output($p_value['rd_dt_id'], $p_value[$p_value['dt_rd_field']]);
+                    }
+                }
+            }
             // если серийных данных нет, только корневые 1:1
-
-            if  (($root_value['sub_items']==0) and ($this->export_ec_datastruct == 's')){
+            elseif  (($root_value['sub_items']==0) and ($this->export_ec_datastruct == 's')){
 
                 foreach ( $exp_parent_items as $p_value) {
                     $this->exp_append();
@@ -1314,8 +1340,8 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
                     if ($p_value['dt_is_img']=='1') // если изображение
                     {
                                                         $this->add_trace('2.5 p_value rd_dt_id = '.$p_value['rd_dt_id'],'value', __FUNCTION__); 
-                                                        $this->add_trace('2.5.1 p_value ec_id= = '.$this->ec_id,'value', __FUNCTION__); 
-                        $this->put_element_to_output($p_value['rd_dt_id'], $p_value['ri_img_path'].'/'.$p_value['ri_img_name']);
+                                                        $this->add_trace('2.5.1 p_value ec_id = '.$this->ec_id,'value', __FUNCTION__); 
+                        $this->put_element_to_output($p_value['rd_dt_id'], $this->ec_img_path.'/'.$this->ss_id. '/'.$p_value['ri_img_name']);
                     } else {
                         $this->put_element_to_output($p_value['rd_dt_id'], $p_value[$p_value['dt_rd_field']]);
                     }
@@ -1330,8 +1356,8 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
                     if ($p_value['dt_is_img']=='1') // если изображение
                     {
                                                         $this->add_trace('2.5 p_value rd_dt_id = '.$p_value['rd_dt_id'],'value', __FUNCTION__); 
-                                                        $this->add_trace('2.5.1 p_value ec_id= = '.$this->ec_id,'value', __FUNCTION__); 
-                        $this->put_element_to_output($p_value['rd_dt_id'], $p_value['ri_img_path'].'/'.$p_value['ri_img_name']);
+                                                        $this->add_trace('2.5.1 p_value ec_id = '.$this->ec_id,'value', __FUNCTION__); 
+                        $this->put_element_to_output($p_value['rd_dt_id'], $this->ec_img_path.'/'.$this->ss_id.'/'.$p_value['ri_img_name']);
                     } else {
                         $this->put_element_to_output($p_value['rd_dt_id'], $p_value[$p_value['dt_rd_field']]);
                     };
@@ -1350,7 +1376,7 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
                                                         $this->add_trace('2.6 p_value[rd_id] = '.$p_value['rd_id'],'value', __FUNCTION__);
                         if ($p_value['dt_is_img']=='1') // если изображение
                         {
-                            $this->put_element_to_output($p_value['rd_dt_id'], $p_value['ri_img_path'].'/'.$p_value['ri_img_name']);
+                            $this->put_element_to_output($p_value['rd_dt_id'], $this->ec_img_path.'/'.$this->ss_id.'/'.$p_value['ri_img_name']);
                         } else {
                             $this->put_element_to_output($p_value['rd_dt_id'], $p_value[$p_value['dt_rd_field']]);
                         };
@@ -1374,7 +1400,7 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
                                                     $this->add_trace('2.7 c_value[rd_id] = '.$c_value['rd_id'],'value', __FUNCTION__);
                         if ($c_value['dt_is_img']=='1') // если изображение
                         {
-                            $this->put_element_to_output($c_value['rd_dt_id'], $c_value['ri_img_path'].'/'.$c_value['ri_img_name']);
+                            $this->put_element_to_output($c_value['rd_dt_id'], $this->ec_img_path.'/'.$this->ss_id.'/'.$c_value['ri_img_name']);
                         } else {
                           $this->put_element_to_output($c_value['rd_dt_id'], $c_value[$c_value['dt_rd_field']]);
                         };
@@ -1443,19 +1469,22 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
         $val = str_replace('"', '""',$val);
 
             // обрабатываем особые форматы
-        if (trim($exp_fields['ecf_field']) == 'Feature(Name:Value:Position)') //PrestaShop
+        if (trim($exp_fields['ecf_field']) == 'Feature(Name:Value:Position)'  and $this->ec_id=1) //PrestaShop
         {
                                         $this->add_trace('4.3 ','marker', __FUNCTION__);
             $this->outputs_csv[1][$res] .= $exp_fields['dt_name'].':'.$val.':1'.',';
 
-        } elseif (trim($exp_fields['ecf_field']) == 'Categories (x,y,z...)') { //PrestaShop
+        } elseif (trim($exp_fields['ecf_field']) == 'Categories (x,y,z...)'  and $this->ec_id=1) { //PrestaShop
             $this->outputs_csv[1][$res] .= $val.',';
 
-        } elseif (trim($exp_fields['ecf_field']) == 'Image URLs (x,y,z...)') { //PrestaShop
+        } elseif (trim($exp_fields['ecf_field']) == 'Image URLs (x,y,z...)'  and $this->ec_id=1) { //PrestaShop
             $this->outputs_csv[1][$res] .= $val.',';            
 
-        } elseif (trim($exp_fields['ecf_field']) == 'description(ru-ru)') { //OpenCart
-            $this->outputs_csv[1][$res] .= $val.'<br>';       
+        } elseif (trim($exp_fields['ecf_field']) == 'description(ru-ru)' ) { //OpenCart
+            $this->outputs_csv[1][$res] .= $val.'<br>';
+
+        } elseif (trim($exp_fields['ecf_field']) == 'Description' and $this->ec_id=2) { //PrestaShop - собираем картинки в описание категорий
+            $this->outputs_csv[1][$res] .= '<img src = "'.$val.'">';       
 
         } else { // общий случай. Просто вносим значение без предобработки
 
@@ -1588,6 +1617,21 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
         $this->current_page_body = str_ireplace( '</li>', '<br>', $this->current_page_body);
         $this->current_page_body = str_ireplace( '<ol', '<p', $this->current_page_body);
         $this->current_page_body = str_ireplace( '</ol>', '</p>', $this->current_page_body);
+        @$this->current_page_DOM->loadHTML($this->current_page_body); // 
+        $this->current_page_xpath = new \DomXPath($this->current_page_DOM);
+
+    }
+    
+    /*
+        weekender.ua замена списков на блоки 
+    */
+    function pre_weekender(){
+        $this->current_page_body = str_ireplace( '<ul', '<pre', $this->current_page_body);
+        $this->current_page_body = str_ireplace( '</ul>', '</pre>', $this->current_page_body);
+        $this->current_page_body = str_ireplace( '<li', '- ', $this->current_page_body);
+        $this->current_page_body = str_ireplace( '</li>', '<br>', $this->current_page_body);
+        $this->current_page_body = str_ireplace( '<ol', '<pre', $this->current_page_body);
+        $this->current_page_body = str_ireplace( '</ol>', '</pre>', $this->current_page_body);
         @$this->current_page_DOM->loadHTML($this->current_page_body); // 
         $this->current_page_xpath = new \DomXPath($this->current_page_DOM);
 
