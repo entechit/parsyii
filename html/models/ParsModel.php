@@ -1484,7 +1484,7 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
             $this->outputs_csv[1][$res] .= $val.'<br>';
 
         } elseif (trim($exp_fields['ecf_field']) == 'Description' and $this->ec_id=2) { //PrestaShop - собираем картинки в описание категорий
-            $this->outputs_csv[1][$res] .= '<img src = "'.$val.'">';       
+            $this->outputs_csv[1][$res] .= '<img src = '.$val.' width =63px>';
 
         } else { // общий случай. Просто вносим значение без предобработки
 
