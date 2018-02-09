@@ -202,3 +202,12 @@ and rd_dt_id = 9
 and rd_parentchild_seria = 0
 and rd_id not in 
 (Select rd_id from temp_id );
+
+
+/* добавляем категории в товары, у которых серия не 0, старвниваем по имени категории из серии  = 0*/
+Set @pcs = 22;
+Insert into result_data (rd_dt_id, rd_ss_id, rd_sp_id, rd_parentchild_seria, rd_short_data) 
+Select 1839, 16, rd.rd_sp_id, @pcs, 278  
+from result_data rd 
+where rd.rd_ss_id=16 and rd.rd_dt_id = 1926 and rd.rd_short_data = '11 ALIVIO' 
+and rd.rd_sp_id in (Select rdd.rd_sp_id from result_data rdd where rdd.rd_sp_id = rd.rd_sp_id and rdd.rd_parentchild_seria = @pcs);

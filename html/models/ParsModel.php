@@ -1480,6 +1480,9 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
         } elseif (trim($exp_fields['ecf_field']) == 'Image URLs (x,y,z...)'  and $this->ec_id=1) { //PrestaShop
             $this->outputs_csv[1][$res] .= $val.',';            
 
+        } elseif (trim($exp_fields['ecf_field']) == 'Name *'  and $this->ec_id=1) { //PrestaShop
+            $this->outputs_csv[1][$res] .= $val.' ';            
+
         } elseif (trim($exp_fields['ecf_field']) == 'description(ru-ru)' ) { //OpenCart
             $this->outputs_csv[1][$res] .= $val.'<br>';
 
