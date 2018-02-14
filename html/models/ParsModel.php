@@ -1365,7 +1365,7 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
 
             } elseif ($this->export_ec_datastruct == 'm') { // если и корневые и дочерние крутим цикл в цикле
 
-                for ($i = 1; $i <= $root_value['sub_items']-1; $i++){
+                for ($i = 1; $i <= $root_value['sub_items']; $i++){   // $root_value['sub_items']-1
 
                     $this->exp_append();
                     $this->put_element_to_output(0,  $this->get_id($root_value['sp_url'], $i));
@@ -1469,24 +1469,24 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
         $val = str_replace('"', '""',$val);
 
             // обрабатываем особые форматы
-        if (trim($exp_fields['ecf_field']) == 'Feature(Name:Value:Position)'  and $this->ec_id=1) //PrestaShop
+        if (trim($exp_fields['ecf_field']) == 'Feature(Name:Value:Position)'  and $this->ec_id==1) //PrestaShop
         {
                                         $this->add_trace('4.3 ','marker', __FUNCTION__);
             $this->outputs_csv[1][$res] .= $exp_fields['dt_name'].':'.$val.':1'.',';
 
-        } elseif (trim($exp_fields['ecf_field']) == 'Categories (x,y,z...)'  and $this->ec_id=1) { //PrestaShop
+        } elseif (trim($exp_fields['ecf_field']) == 'Categories (x,y,z...)'  and $this->ec_id==1) { //PrestaShop
             $this->outputs_csv[1][$res] .= $val.',';
 
-        } elseif (trim($exp_fields['ecf_field']) == 'Image URLs (x,y,z...)'  and $this->ec_id=1) { //PrestaShop
+        } elseif (trim($exp_fields['ecf_field']) == 'Image URLs (x,y,z...)'  and $this->ec_id==1) { //PrestaShop
             $this->outputs_csv[1][$res] .= $val.',';            
 
-        } elseif (trim($exp_fields['ecf_field']) == 'Name *'  and $this->ec_id=1) { //PrestaShop
+        } elseif (trim($exp_fields['ecf_field']) == 'Name *'  and $this->ec_id==1) { //PrestaShop
             $this->outputs_csv[1][$res] .= $val.' ';            
 
         } elseif (trim($exp_fields['ecf_field']) == 'description(ru-ru)' ) { //OpenCart
             $this->outputs_csv[1][$res] .= $val.'<br>';
 
-        } elseif (trim($exp_fields['ecf_field']) == 'Description' and $this->ec_id=2) { //PrestaShop - собираем картинки в описание категорий
+        } elseif (trim($exp_fields['ecf_field']) == 'Description' and $this->ec_id==2) { //PrestaShop - собираем картинки в описание категорий
             $this->outputs_csv[1][$res] .= '<img src = '.$val.' width =63px>';
 
         } else { // общий случай. Просто вносим значение без предобработки
