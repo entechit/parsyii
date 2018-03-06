@@ -9,7 +9,7 @@ SELECT * FROM parsyii.source_price where price_id =21595
 Select * from link_price_source_page  where lpsp_sp_id in (730495)
 
 SELECT * FROM parsyii.source_page where sp_ss_id = 26 and /*sp_errors is not null sp_dp_id is null   and */ sp_parsed = 0 ;
-SELECT * FROM parsyii.source_page where sp_ss_id = 16 and  sp_id in (228949);
+SELECT * FROM parsyii.source_page where sp_ss_id = 16 and  sp_id in (228742);
 SELECT * FROM parsyii.source_page where sp_ss_id = 22  /*and sp_dp_id is not null  and sp_seek_urls = 1 */ and sp_url /*in ('http://borika.ua//ru/node/119','http://borika.ua/ru/node/119')*/  like '%http://weekender.ua/main/item/164%';
 SELECT * FROM parsyii.source_page order by sp_id desc limit 108
 
@@ -18,8 +18,10 @@ Select * from source_page sp where sp.sp_ss_id = 26 and not exists (Select 1 fro
 
 SELECT distinct sp_dp_id FROM parsyii.source_page where sp_ss_id = 46 
 
-SELECT * FROM parsyii.result_data where (rd_ss_id=26 or rd_ss_id=16) and rd_short_data like 'https://images-fe%' order by rd_id desc;
-Select * FROM parsyii.result_data where rd_ss_id=16 and /*rd_dt_id=8*/ rd_sp_id in  (228949) order by rd_id desc;
+SELECT * FROM parsyii.result_data where (rd_ss_id=16) and rd_short_data like 'https://images-fe%' order by rd_id desc;
+Select * FROM parsyii.result_data where rd_ss_id=16 and rd_dt_id=12 /* rd_sp_id in  (228949) */ order by rd_id desc;
+
+
 
 /* выгрузка описаний дл яперевода с японского */
 Select rd2.rd_id, rd2.rd_sp_id, rd2.rd_short_data, rd10.rd_long_data, rd21.rd_long_data, rd1839.rd_short_data 
@@ -56,6 +58,16 @@ select distinct rd.*, ri.ri_img_path, dt.dt_is_img, dt.dt_rd_field, ri.ri_img_na
                      and eltf.eltf_ec_id = 2 and eltf.eltf_id is not null
                 
 
+Select distinct dt.dt_id, dt.dt_name, dt.dt_is_img
+from  result_data rd
+left join dir_tags dt on rd.rd_dt_id = dt.dt_id
+WHERE rd.rd_ss_id = 16
+
+
+/* Выгрузка значений данных содержащих иероглифы */
+SELECT rd.rd_id, rd.rd_short_data, sp.sp_url FROM parsyii.result_data rd
+left join source_page sp  on  sp.sp_id = rd.rd_sp_id
+ WHERE rd_dt_id<>12 and rd_short_data NOT REGEXP '^[A-Za-z0-9\.,、,/\,_,:,－,+,%,\',@&\(\) \-]*$' and rd.rd_ss_id = 16
 
 
 /* END ВЫБОРКИ ДАННЫХ */
@@ -86,10 +98,10 @@ WHERE rd.rd_ss_id = 16 and eltf.eltf_ecf_id is null ;
 Select * from export_link_tag_field where eltf_ec_id = 2;
 
 # поля экпорта
-Select * from export_cms_field where ecf_ec_id = 2;
+Select * from export_cms_field where ecf_ec_id = 1;
 
 # константы 16 заказа - катушки японец
-SELECT * FROM `parsyii`.`export_defaults` where ed_ss_id in (45, 22) order by ed_ss_id, ed_ecf_id;
+SELECT * FROM `parsyii`.`export_defaults` where ed_ss_id in (16) order by ed_ss_id, ed_ecf_id;
 
 Select distinct dt_id, dt_name from dir_tags dt
 left join result_data rd on rd.rd_dt_id = dt.dt_id
@@ -211,3 +223,11 @@ Select 1839, 16, rd.rd_sp_id, @pcs, 278
 from result_data rd 
 where rd.rd_ss_id=16 and rd.rd_dt_id = 1926 and rd.rd_short_data = '11 ALIVIO' 
 and rd.rd_sp_id in (Select rdd.rd_sp_id from result_data rdd where rdd.rd_sp_id = rd.rd_sp_id and rdd.rd_parentchild_seria = @pcs);
+
+
+
+/* убираем точку из цены в йенах для престы*/
+Update parsyii.result_data Set rd_short_data = replace(rd_short_data,'.','') where rd_ss_id=16 and rd_dt_id=20;
+
+
+ 

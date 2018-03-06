@@ -89,7 +89,7 @@ class ParsModel extends Model
         $this->ri_img_path     = '../parsdata/';
         $this->result_csv_path = '../parsdata/';
         $this->ri_src_path     = '../source_page/';
-        $this->is_proxy = true;
+        $this->is_proxy = false;
 
         $this->is_trace = false;
         $this->trace_cats = array(/*'marker',*/'value'/*,'pre_func'*/);  // pre_func memory - контроль памяти  value - контроль значений marker - показываем точку в программе
@@ -300,7 +300,9 @@ $this->add_trace('1. ID : '.$this->sp_id.'   URL : '.$this->sp_url, 'value', __F
         $this->current_page_body = $this->file_get_contents_proxy($this->sp_url); 
         $this->current_page_DOM = new \DOMDocument();
         $this->current_page_DOM->preserveWhiteSpace = false;
-        @$this->current_page_DOM->loadHTML('<meta http-equiv="content-type" content="text/html;">' . $this->current_page_body); //  charset=utf-8
+        @$this->current_page_DOM->loadHTML('<meta http-equiv="content-type" content="text/html; '.
+            ($this->cust_id==1 ? 'charset=utf-8':'').'">' . 
+            $this->current_page_body); // Если Мухамедьяров, то добавляем кодировку  
         $this->current_page_xpath = new \DomXPath($this->current_page_DOM);
 
 $this->add_trace('2. ID : '.$this->sp_id.' HTTP-Status : '. $this->HTTP_status .'   URL : '.$this->sp_url , 'value', __FUNCTION__);
@@ -425,6 +427,8 @@ $this->add_trace('12 = '.memory_get_usage(), 'memory', __FUNCTION__);
       foreach ($row as $pars_cond) 
       {
        
+$this->add_trace('choose_pattern dp_id = '.$pars_cond['dp_id'],'value', __FUNCTION__);
+$this->add_trace('choose_pattern pr_id =  '.$pars_cond['pr_id'],'value', __FUNCTION__); 
 
         if (empty($pars_cond['pr_selector'])) continue;
                 
@@ -456,14 +460,6 @@ $this->add_trace('12 = '.memory_get_usage(), 'memory', __FUNCTION__);
         $expression = sprintf('count(%s) > 0', $pars_cond['pr_selector']);
         if ($this->current_page_xpath->evaluate($expression)) // если есть хоть одно совпадение
         { 
-
-/*if ($pars_cond['dp_id']==27){
-$this->add_trace('choose_pattern dp_id = 27 pr_id =  '.$pars_cond['pr_id'],'value', __FUNCTION__);    
-};  
-if ($pars_cond['dp_id']==26){
-$this->add_trace('choose_pattern dp_id = 26  pr_id =  '.$pars_cond['pr_id'],'value', __FUNCTION__);    
-};*/          
-
         // вызываем функцию ПОСТобработки
             if (!empty($pars_cond['pr_post_function'])){
                 $post_func = $pars_cond['pr_post_function'];
@@ -474,10 +470,12 @@ $this->add_trace('choose_pattern dp_id = 26  pr_id =  '.$pars_cond['pr_id'],'val
 
             ++ $counter_vin;            
         };    
+
+        $this->add_trace('choose_pattern counter_vin = '.$counter_vin,'value', __FUNCTION__);
+$this->add_trace('choose_pattern counter_cond =  '.$counter_cond,'value', __FUNCTION__); 
         
         $prev_dp_id = $pars_cond['dp_id'];
     };
-
 
     if ($counter_vin == $counter_cond)
     {
@@ -1480,9 +1478,9 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
         } elseif (trim($exp_fields['ecf_field']) == 'Image URLs (x,y,z...)'  and $this->ec_id==1) { //PrestaShop
             $this->outputs_csv[1][$res] .= $val.',';            
 
-        } elseif (trim($exp_fields['ecf_field']) == 'Name *'  and $this->ec_id==1) { //PrestaShop
+       /* } elseif (trim($exp_fields['ecf_field']) == 'Name *'  and $this->ec_id==1) { //PrestaShop - перенесли в базу
             $this->outputs_csv[1][$res] .= $val.' ';            
-
+        */
         } elseif (trim($exp_fields['ecf_field']) == 'description(ru-ru)' ) { //OpenCart
             $this->outputs_csv[1][$res] .= $val.'<br>';
 
