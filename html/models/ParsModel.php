@@ -164,6 +164,7 @@ $this->add_trace('PRICE !!!!!', 'marker', __FUNCTION__);
 
             $this->fetch_source_page(); // сдвигаем указатель на страницу
 
+$this->add_trace('3. ID : '.$this->sp_id.'   URL : '.$this->sp_url, 'value', __FUNCTION__);
             while  ($this->sp_id!=0) 
             { 
                 if ($this->get_page() == 'continue'){
@@ -242,7 +243,7 @@ $this->add_trace('EXPORT 0 ', 'marker', __FUNCTION__);
         $row = (new \yii\db\Query())
             ->select(['sp_id', 'sp_url', 'sp_dp_id', 'sp_seek_urls'])
             ->from('source_page')
-            ->where('sp_ss_id = :sp_ss_id and sp_id>:sp_id and sp_parsed=0 and sp_errors is null')
+            ->where('sp_ss_id = :sp_ss_id and sp_id>:sp_id and sp_parsed=0 and (sp_errors is null or trim(sp_errors) = "")')
             ->addParams([':sp_ss_id' => $this->ss_id, 
                         ':sp_id' =>  $this->sp_id ])
             ->limit(1)
