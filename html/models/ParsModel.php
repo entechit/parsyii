@@ -6,6 +6,7 @@ use yii\data\SqlDataProvider;
 
 //************************************
 //  Базовый класс для парсинга сайтов.
+// #GT - хеш тег
 //************************************
 
 class ParsModel extends Model
@@ -48,6 +49,7 @@ class ParsModel extends Model
 
     public $pr_parentchild;  // признак того, что селектор описывает родительский (один на всю страницй) или дочерний набор
     public $parentchild_series; // счетчик № набора в квери 
+    public $head_tag_array; // массив пересоздается для каждой таблицы. В нем держим связку индекса заголовка и ID тега
     public $is_trace;
     public $trace_cats;  // категории трассировки
 
@@ -91,8 +93,8 @@ class ParsModel extends Model
         $this->ri_src_path     = '../source_page/';
         $this->is_proxy = false;
 
-        $this->is_trace = false;
-        $this->trace_cats = array(/*'marker',*/'value'/*,'pre_func'*/);  // pre_func memory - контроль памяти  value - контроль значений marker - показываем точку в программе
+        $this->is_trace = true;
+        $this->trace_cats = array('marker','value'/*,'pre_func'*/, '#GT');  // pre_func memory - контроль памяти  value - контроль значений marker - показываем точку в программе
 
 
         $this->counter_dl_img = 0;      // количество скачаных картинок
@@ -124,8 +126,8 @@ class ParsModel extends Model
 
         $row_ss = (new \yii\db\Query())->from('source_site')->where(['ss_id' => $this->ss_id])->one();
        
-        $this->ss_url = $row_ss['ss_url'];  
-        $this->dc_id  = $row_ss['ss_dc_id'];  
+        $this->ss_url   = $row_ss['ss_url'];  
+        $this->dc_id    = $row_ss['ss_dc_id'];  
         $this->cust_id  = $row_ss['ss_cust_id'];  
 
         $this->cb_find_internal_url = $ss_params["cb_find_internal_url"]; // парсинг страниц для поиска ссылок
@@ -134,8 +136,7 @@ class ParsModel extends Model
         $this->cb_download_page     = $ss_params["cb_download_page"];     // скачать страницу
         $this->cb_pars_source_page  = $ss_params["cb_pars_source_page"];  // необходимо выдрать все известные теги
         $this->cb_download_img      = $ss_params["cb_download_img"];      // скачать картинки
-        
-        $this->cb_export_data      = $ss_params["cb_export_data"];      // экспортировать данные в формат заказчика
+        $this->cb_export_data       = $ss_params["cb_export_data"];      // экспортировать данные в формат заказчика
     
         /* 
           если загружаем по прайсу, то изначально формируем ссылки на страницы с условием поиска, 
@@ -147,7 +148,6 @@ $this->add_trace('PRICE !!!!!', 'marker', __FUNCTION__);
           $this->mode_get_node = 'urls';
           
           $this->price_main_f();
-
          
         }
 
@@ -156,8 +156,8 @@ $this->add_trace('PRICE !!!!!', 'marker', __FUNCTION__);
         // если нужно чета делать кроме как загрузить уже найденные ссылки
         if (($this->cb_pars_source_page == 1) or 
             ($this->cb_type_source_page == 1) or 
-              (($this->cb_find_internal_url == 1) and ($this->rb_url_source == 'rb_seek_url_onsite'))
-            )
+            (($this->cb_find_internal_url == 1) and ($this->rb_url_source == 'rb_seek_url_onsite'))
+           )
         {
 
             $this->addlog("Нам есть что считать");
@@ -165,6 +165,7 @@ $this->add_trace('PRICE !!!!!', 'marker', __FUNCTION__);
             $this->fetch_source_page(); // сдвигаем указатель на страницу
 
 $this->add_trace('3. ID : '.$this->sp_id.'   URL : '.$this->sp_url, 'value', __FUNCTION__);
+
             while  ($this->sp_id!=0) 
             { 
                 if ($this->get_page() == 'continue'){
@@ -176,19 +177,19 @@ $this->add_trace('3. ID : '.$this->sp_id.'   URL : '.$this->sp_url, 'value', __F
                 
                 if ($this->cb_type_source_page == '1' and empty($this->sp_dp_id)) 
                 { 
-//$this->add_trace('start choose_pattern() = '.memory_get_usage(), 'memory', __FUNCTION__);
+                        $this->add_trace(' before choose_pattern() = '.memory_get_usage(), 'memory', __FUNCTION__);
                     $this->choose_pattern(); // типизирует
-//$this->add_trace('end   choose_pattern() = '.memory_get_usage(), 'memory', __FUNCTION__);
+                        $this->add_trace('after choose_pattern() = '.memory_get_usage(), 'memory', __FUNCTION__);
                 }
  
                 if (($this->cb_find_internal_url == 1) and ($this->rb_url_source == 'rb_seek_url_onsite')
                     and $this->sp_seek_urls==0)
                 {   
-$this->add_trace('4. Seek_url  ID : '.$this->sp_id.'   URL : '.$this->sp_url, 'value', __FUNCTION__);
+                        $this->add_trace('4. Seek_url  ID : '.$this->sp_id.'   URL : '.$this->sp_url, 'value', __FUNCTION__);
+                        $this->add_trace('start seek_urls() = '.memory_get_usage(), 'memory', __FUNCTION__);
 
-$this->add_trace('start seek_urls() = '.memory_get_usage(), 'memory', __FUNCTION__);
                     $this->seek_urls();  // гребет ссылки на текущей странице
-$this->add_trace('end   seek_urls() = '.memory_get_usage(), 'memory', __FUNCTION__);
+                        $this->add_trace('end   seek_urls() = '.memory_get_usage(), 'memory', __FUNCTION__);
                 }
 
                 if ($this->cb_pars_source_page == '1') 
@@ -243,7 +244,7 @@ $this->add_trace('EXPORT 0 ', 'marker', __FUNCTION__);
         $row = (new \yii\db\Query())
             ->select(['sp_id', 'sp_url', 'sp_dp_id', 'sp_seek_urls'])
             ->from('source_page')
-            ->where('sp_ss_id = :sp_ss_id and sp_id>:sp_id and sp_parsed=0 and (sp_errors is null or trim(sp_errors) = "")')
+            ->where('sp_ss_id = :sp_ss_id and sp_id>:sp_id and (sp_parsed=0 or sp_parsed is null) and (sp_errors is null or trim(sp_errors) = "")')
             ->addParams([':sp_ss_id' => $this->ss_id, 
                         ':sp_id' =>  $this->sp_id ])
             ->limit(1)
@@ -274,7 +275,7 @@ $this->add_trace('1. ID : '.$this->sp_id.'   URL : '.$this->sp_url, 'value', __F
 
     /* BEGIN блок условий, когда страницу качать не нужно*/
 
-    // если нужно только найти ссылки, а с это йстраницы уже ссылки выьраны - страницу не качаем
+    // если нужно только найти ссылки, а с этой страницы уже ссылки выбраны - страницу не качаем
     if ( ($this->cb_find_internal_url == 1)
         and ($this->rb_url_source == 'rb_seek_url_onsite')
         and ($this->sp_seek_urls==1)
@@ -629,6 +630,9 @@ $this->add_trace('choose_pattern counter_cond =  '.$counter_cond,'value', __FUNC
     function get_content()
     {
         if (empty($this->sp_dp_id)) return;
+    
+      // Здесь нужно подготовить пустой массив, в котором будет храниться индекс заголовка и ID тега, которым его маркировать
+        $this->head_tag_array = array(array('source_head_index'=>'','dt_id'=>''));
       // цикл по корневым правилам
       $rules_rows_parent = (new \yii\db\Query())
             ->select(['pars_rule.*', 'dir_tags.dt_rd_field', 'dir_tags.dt_is_img',])
@@ -649,17 +653,17 @@ $this->add_trace('choose_pattern counter_cond =  '.$counter_cond,'value', __FUNC
         }
 
 
-$this->add_trace('1 this->sp_url = '.$this->sp_url,'marker', __FUNCTION__);
+                    $this->add_trace('1 this->sp_url = '.$this->sp_url,'marker', __FUNCTION__);
         $this->pr_parentchild = $rules_row_parent['pr_parentchild'];
 
         if ($rules_row_parent['pr_nodetype']=='q') // набор элементов
         {
-$this->add_trace('2 Query ','marker', __FUNCTION__);
+                                    $this->add_trace('2 Query ','marker', __FUNCTION__);
           $this->get_query($this->current_page_xpath, $rules_row_parent);
         } 
         elseif($rules_row_parent['pr_nodetype']=='n') // одиночный элемент
         { 
-$this->add_trace('3 Node ','marker', __FUNCTION__);                        
+                                    $this->add_trace('3 Node ','marker', __FUNCTION__);                        
           $this->get_node($this->current_page_xpath, $rules_row_parent );
         }
       };
@@ -678,20 +682,30 @@ $this->add_trace('3 Node ','marker', __FUNCTION__);
     // вынимает набор данных
     function get_query($node, $selector, $context = NULL)
     {
+        $this->add_trace('0 здесь' ,'marker', __FUNCTION__);
+        // #GT инициализируем переменную, в которой держим индекс текущего узла в наборе для парсинга заголовков
+        $node_head_index = Null;
 
+        // #VT
         $this->nodes_name_value =  array('dt_id'=>'','dt_name'=>'','rd_val'=>'');
         
         if ($context !== NULL) {
-          if ($this->pr_parentchild == 'c') ++ $this->parentchild_series;
-          $res_nodes = $node->query($selector['pr_selector'], $context);  
+                            $this->add_trace("1 Есть контекст " . " pr_parentchild == ".$selector['pr_parentchild'] ,'#GT', __FUNCTION__);
+          
+
+          if ($selector['pr_parentchild'] == 'c') ++ $this->parentchild_series;
+
+
+                            $this->add_trace("2 Серия  = " .$this->parentchild_series ,'#GT', __FUNCTION__);
+          $res_nodes = $node->query($selector['pr_selector'], $context);
         }else {
+                            $this->add_trace("3 Нет контекста pr_parentchild == ".$this->pr_parentchild ,'#GT',  __FUNCTION__);
           $this->parentchild_series = 0;
           $res_nodes = $node->query($selector['pr_selector']);
         };
 
-
         If ($res_nodes === false) { 
-$this->add_trace("0 get_query Xpath Ошибка построения query",'marker', __FUNCTION__);      
+                    $this->add_trace("3 Ошибка построения query - нет узлов",'marker', __FUNCTION__);      
             return; 
         }
 
@@ -706,17 +720,17 @@ $this->add_trace("0 get_query Xpath Ошибка построения query",'ma
                   ->addParams([':pr_dp_id' => $this->sp_dp_id,
                                ':pr_id'    => $selector['pr_id'],]);
 
+                                            $this->add_trace('1 Query selector[pr_selector]'.$selector['pr_selector'],'value', __FUNCTION__);
 
-$this->add_trace('1 Query selector[pr_selector]'.$selector['pr_selector'],'value', __FUNCTION__);
-
-            if (($this->pr_parentchild == 'c') and ($context == NULL)) {
-              ++ $this->parentchild_series;  
+            if (($selector['pr_parentchild'] == 'c') and ($context == NULL)) {
+               ++ $this->parentchild_series;  
+              $this->add_trace('Child & !Context parentchild_series='.$this->parentchild_series,'#GT', __FUNCTION__);
             }  
+
 
             foreach ($rules_rows_sub->each() as $rules_row_sub) 
             {    
                  // всегда при следующем шаге внутри квери очищаем массив пары имя-значение
-              
 
                 if ($rules_row_sub['pr_nodetype']=='q')
                 {
@@ -725,11 +739,18 @@ $this->add_trace('1 Query selector[pr_selector]'.$selector['pr_selector'],'value
                
                 } elseif ($rules_row_sub['pr_nodetype']=='n') 
                 {
-$this->add_trace(" 2 N Xpath =".$rules_row_sub['pr_selector']."PR_ID = ".$rules_row_sub['pr_id'],'marker', __FUNCTION__);
-                    $this->get_node($this->current_page_xpath, $rules_row_sub, $res_node );
+                                            $this->add_trace(" 2 N Xpath =".$rules_row_sub['pr_selector']."PR_ID = ".$rules_row_sub['pr_id'],'marker', __FUNCTION__);
+                    // #GT если этот узел в структуре заголовка, то указываем индекс
+                    if (($rules_row_sub['pr_name_value'] == 'h') or 
+                        ($rules_row_sub['pr_name_value'] == 'p')) 
+                    {
+                        ++ $node_head_index;  
+                    }  
+
+                    $this->get_node($this->current_page_xpath, $rules_row_sub, $res_node, $node_head_index);
                 }
 
-                         // вызываем функцию ПОСТобработки
+                // вызываем функцию ПОСТобработки
                 if (!empty($rules_row_sub['pr_post_function'])){
                      $post_func = $rules_row_sub['pr_post_function'];
                     if ( method_exists($this,$post_func))
@@ -741,8 +762,9 @@ $this->add_trace(" 2 N Xpath =".$rules_row_sub['pr_selector']."PR_ID = ".$rules_
 
     //**********************************************
     // вынимает конкретные данные и пишет в базу
-    function get_node($node, $selector, $context = Null)
+    function get_node($node, $selector, $context = Null, $node_index = Null)
     {
+        $this->add_trace('0 здесь' ,'marker', __FUNCTION__);
         // var_dump($context); 
         // var_dump($this->parslog); 
         // var_dump($node);die;
@@ -752,7 +774,7 @@ $this->add_trace(" 2 N Xpath =".$rules_row_sub['pr_selector']."PR_ID = ".$rules_
         // инциализация для получения параметров img
         $alt = '';
         $title = '';
-$this->add_trace("1 N Xpath =".$selector['pr_selector'],'value', __FUNCTION__);
+                                    $this->add_trace("1 N Xpath =".$selector['pr_selector'],'value', __FUNCTION__);
         if ($context !== NULL) {
           $res_nodes = $node->query($selector['pr_selector'], $context);   
         }else {
@@ -765,7 +787,7 @@ $this->add_trace("1 N Xpath =".$selector['pr_selector'],'value', __FUNCTION__);
         $res_node = $res_nodes->Item(0); 
 
 
-$this->add_trace("2 N Xpath =".$selector['pr_selector'],'value', __FUNCTION__);
+                                    $this->add_trace("2 N Xpath =".$selector['pr_selector'],'value', __FUNCTION__);
 
             if ($selector['dt_is_img']==1){
                 $res_srcS = $node->query('./@src', $res_node);  
@@ -801,8 +823,7 @@ $this->add_trace("2 N Xpath =".$selector['pr_selector'],'value', __FUNCTION__);
                     $val = trim($res_node->nodeValue);
                 }
                    
-
-$this->add_trace("3 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node,'value', __FUNCTION__);
+                        $this->add_trace("3 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node,'value', __FUNCTION__);
             };
 
         // если это картинка, то вынимаем параметры alt и title
@@ -814,52 +835,79 @@ $this->add_trace("3 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node,'valu
         
 
         if (!empty($val)){
-$this->add_trace("4 val =".$val,'value', __FUNCTION__);
+                            $this->add_trace("4 val =".$val,'value', __FUNCTION__);
           if ($this->mode_get_node == 'result'){
-$this->add_trace("4.1 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node,'value', __FUNCTION__);
+                            $this->add_trace("4.1 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node,'value', __FUNCTION__);
 
             // "обработка пары имя параметра - значение"
             if (!empty($selector['pr_name_value'])){
 
-$this->add_trace("4.1.0 pr_name_value =".$selector['pr_name_value'],'value', __FUNCTION__);
+                                        $this->add_trace("4.1.0 pr_name_value =".$selector['pr_name_value'],'value', __FUNCTION__);
 
-                if($selector['pr_name_value'] == 'n'){
-$this->add_trace("4.1.0.1 pr_name_value =".$selector['pr_name_value'],'value', __FUNCTION__);
+                if($selector['pr_name_value'] == 'n')
+                {
+                                        $this->add_trace("4.1.0.1 pr_name_value =".$selector['pr_name_value'],'value', __FUNCTION__);
 
                      $this->nodes_name_value['dt_name'] = $val;
                      $this->nodes_name_value['dt_id'] = $this->name_value_subst($val);
 
-$this->add_trace("4.1.0.2 nodes_name_value[dt_id] =".$this->nodes_name_value['dt_id'],'value', __FUNCTION__);
+                                        $this->add_trace("4.1.0.2 nodes_name_value[dt_id] =".$this->nodes_name_value['dt_id'],'value', __FUNCTION__);
 
-                } elseif ($selector['pr_name_value'] == 'v') {
-$this->add_trace("4.1.0.3 pr_name_value =".$selector['pr_name_value'],'value', __FUNCTION__);
+                } 
+                elseif ($selector['pr_name_value'] == 'v') 
+                {
+                                        $this->add_trace("4.1.0.3 pr_name_value =".$selector['pr_name_value'],'value', __FUNCTION__);
                      $this->nodes_name_value['rd_val'] = $val;
+                }
+                elseif ($selector['pr_name_value'] == 'h')  // #GT в заголовке указана характеристика
+                {
+                    // ищем соответствующий DT и заносим в массив
+                    $temp_dt_id=$this->subst_head_by_tag($val);
+                    if (!empty($temp_dt_id)) {
+                        $this->head_tag_array[] = array('source_head_index'=>$node_index,'dt_id'=>$temp_dt_id);
+                    }
+                    $temp_dt_id=null;
+                } 
+                elseif ($selector['pr_name_value'] == 'p')  // #GT ячейка зо значением 
+                {
+                    // ищем в массиве подменяем значение $selector['pr_dt_id']
+                    $temp_dt_id=$this->find_dt_head_by_tag($node_index);
+                    if (!empty($temp_dt_id)) {
+                        $this->nodes_name_value['dt_id'] = $temp_dt_id;
+                        $this->nodes_name_value['rd_val'] = $val;
+                        $this->nodes_name_value['dt_name'] = '#GT';
+                        $this->nodes_name_value['dt_rd_field'] = 'rd_short_data';
+                    };
+ $this->add_trace('#GT dt_id = '.$this->nodes_name_value['dt_id'],'value', __FUNCTION__);                   
+ $this->add_trace('#GT dt_name = '.$this->nodes_name_value['dt_name'],'value', __FUNCTION__);                   
+ $this->add_trace('#GT rd_val = '.$this->nodes_name_value['rd_val'],'value', __FUNCTION__);                   
                 };
 
-                if ((!empty($this->nodes_name_value['dt_id']  )) and 
+                if ((!empty($this->nodes_name_value['dt_id'])) and 
                     (!empty($this->nodes_name_value['dt_name'])) and 
                     (!empty($this->nodes_name_value['rd_val'] ))) {
                         
                         $selector['pr_dt_id'] = $this->nodes_name_value['dt_id'];
                         $val = $this->nodes_name_value['rd_val'];
-$this->add_trace("4.1.0.4 NO EXIT =".$this->nodes_name_value['dt_id']."---".$this->nodes_name_value['dt_name']. "---" . $this->nodes_name_value['rd_val'],'value', __FUNCTION__);
+                                        $this->add_trace("4.1.0.4 NO EXIT =".$this->nodes_name_value['dt_id']."---".$this->nodes_name_value['dt_name']. "---" . $this->nodes_name_value['rd_val'],'value', __FUNCTION__);
 
                         $selector['dt_rd_field'] = $this->nodes_name_value['dt_rd_field'];
 
                     } else {
-$this->add_trace("4.1.0.5 EXIT =".$this->nodes_name_value['dt_id']."---".$this->nodes_name_value['dt_name']. "---" . $this->nodes_name_value['rd_val'],'value', __FUNCTION__);
+                                        $this->add_trace("4.1.0.5 EXIT =".$this->nodes_name_value['dt_id']."---".$this->nodes_name_value['dt_name']. "---" . $this->nodes_name_value['rd_val'],'value', __FUNCTION__);
                         return;
                     };
             }
             
-$this->add_trace("4.1.1 dt_id =".$selector['pr_dt_id'],'value', __FUNCTION__);
+                                        $this->add_trace("4.1.1 dt_id =".$selector['pr_dt_id'],'value', __FUNCTION__);
+$this->add_trace(" Перед Insert this->parentchild_series =".$this->parentchild_series,'#GT', __FUNCTION__);                                        
               Yii::$app->db->createCommand()
                      ->insert('result_data', 
                              ["rd_ss_id" => $this->ss_id,
                              "rd_sp_id" =>  $this->sp_id,
                              "rd_dt_id" => $selector['pr_dt_id'],
                              $selector['dt_rd_field'] => $val,
-                             "rd_parentchild_seria"=> ($this->pr_parentchild == 'p'?'0':$this->parentchild_series),
+                             "rd_parentchild_seria"=> ($selector['pr_parentchild'] == 'p'?'0':$this->parentchild_series),
                              ]) 
                     ->execute();
 
@@ -884,6 +932,63 @@ $this->add_trace("4.2 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node,'va
           };
         };
     }
+
+    
+    //*********************************
+    /* #GT
+      Для функционала парсинга таблиц с названиями характеристик в шапке 
+      на вход принимает текст заголовка, ищет ему соответсвтие в таблице dir_header_tag
+      Возвращает либо NULL либо dt_id (id тега, который нужно указывать при сохранении)
+      Table: pars_header_tag
+        Columns:
+            dht_id int(11) AI PK 
+            dht_dt_id int(11) 
+            dht_text varchar(250)
+    */
+    function subst_head_by_tag($head_text) 
+    {
+        $dht_vals = (new \yii\db\Query())
+                ->select(['dht_dt_id',])
+                ->from('dir_header_tag')
+                ->where('LOWER(trim(dht_text)) = trim(:head_text)')
+                ->addParams([':head_text' => mb_strtolower($head_text,'utf8'),])
+                ->one();
+$this->add_trace('head_text = '.$head_text,'value', __FUNCTION__);
+$this->add_trace('dht_vals = '.$dht_vals['dht_dt_id'],'value', __FUNCTION__);
+
+        if (!empty($dht_vals['dht_dt_id']))
+        {
+           $res = $dht_vals['dht_dt_id']; 
+        } ELSE {
+           $res = NULL;
+        }
+        return $res;
+    }
+
+//*********************************
+    /* #GT
+      Для функционала парсинга таблиц с названиями характеристик в шапке 
+      на вход принимает индекс узла в тексте, ищет ему соответсвтие в массиве head_tag_array
+      Возвращает либо NULL либо dt_id (id тега, который нужно указывать при сохранении)
+    */
+    function find_dt_head_by_tag($source_head_index) 
+    {
+$this->add_trace('source_head_index = '.$source_head_index,'value', __FUNCTION__);
+        $incarr = 0;
+        foreach ($this->head_tag_array as $value) {
+
+            if ($value['source_head_index'] == $source_head_index)
+            {
+$this->add_trace('dt_id = '.$value['dt_id'],'value', __FUNCTION__);
+                return $value['dt_id'];
+            };
+            
+            ++ $incarr;
+        }
+
+        return null;
+    }
+
     //*********************************
     /*
       Кооректирует URL ссылку дописывая если не хватает base_url
