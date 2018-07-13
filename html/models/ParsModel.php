@@ -947,14 +947,27 @@ $this->add_trace("4.2 val =".$val  . 'MODE_GET_NODE = '.$this->mode_get_node,'va
     */
     function subst_head_by_tag($head_text) 
     {
+        $head_text = str_replace(array("\r\n", "\r", "\n", "\n\r"), '', $head_text);
+
         $dht_vals = (new \yii\db\Query())
-                ->select(['dht_dt_id',])
+                ->select(['dht_dt_id','dht_text'])
                 ->from('dir_header_tag')
-                ->where('LOWER(trim(dht_text)) = trim(:head_text)')
-                ->addParams([':head_text' => mb_strtolower($head_text,'utf8'),])
+                ->where('trim(dht_text) = trim(:head_text)')
+                ->addParams([':head_text' => $head_text,])
                 ->one();
+
+
 $this->add_trace('head_text = '.$head_text,'value', __FUNCTION__);
 $this->add_trace('dht_vals = '.$dht_vals['dht_dt_id'],'value', __FUNCTION__);
+
+        if (empty($dht_vals['dht_text'])){
+                        Yii::$app->db->createCommand()
+                        ->insert('dir_header_tag', 
+                                ["dht_text" => trim($head_text),
+                                "dht_url" => $this->sp_url,])
+                        ->execute();
+        }
+
 
         if (!empty($dht_vals['dht_dt_id']))
         {
