@@ -93,7 +93,7 @@ class ParsModel extends Model
         $this->ri_src_path     = '../source_page/';
         $this->is_proxy = false;
 
-        $this->is_trace = true;
+        $this->is_trace = false;
         $this->trace_cats = array('marker','value'/*,'pre_func'*/, '#GT');  // pre_func memory - контроль памяти  value - контроль значений marker - показываем точку в программе
 
 
@@ -1755,5 +1755,172 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
         @$this->current_page_DOM->loadHTML($this->current_page_body); // 
         $this->current_page_xpath = new \DomXPath($this->current_page_DOM);
 
+    }
+
+    /*
+        daiwa.com замена в шапке характеристик 2 строк на одну 
+    */
+    function pre_daiwa(){
+        if ((stripos($this->current_page_body, '標準巻糸量') > 0) and 
+           ((stripos($this->current_page_body, 'ナイロン<br>（lb-m）') > 0) or (stripos($this->current_page_body, 'ナイロン<br />（lb-m）')>0)or(stripos($this->current_page_body, 'ナイロン<br>（lb.-m）') > 0)) and
+           ((stripos($this->current_page_body, 'PE<br>（号-m）') > 0) or (stripos($this->current_page_body, 'PE<br />（号-m）')>0))) {
+          $this->current_page_body = str_ireplace('<th colspan="2">標準巻糸量</th>',
+            '<th>標準巻糸量ナイロン（lb-m）</th><th>標準巻糸量PE（号-m）</th>', $this->current_page_body);
+          $this->current_page_body = str_ireplace('<tr>
+<th>ナイロン<br>（lb-m）</th>
+<th>PE<br>（号-m）</th>
+</tr>',
+            '', $this->current_page_body); 
+          $this->current_page_body = str_ireplace('<tr>
+<th>ナイロン<br />（lb-m）</th>
+<th>PE<br />（号-m）</th>
+</tr>',
+            '', $this->current_page_body); 
+          $this->current_page_body = str_ireplace('<tr>
+<th>ナイロン<br />（lb.-m）</th>
+<th>PE<br />（号-m）</th>
+</tr>',
+            '', $this->current_page_body);
+        } 
+        if ((stripos($this->current_page_body, '標準巻糸量') > 0) and 
+           (stripos($this->current_page_body, 'ナイロン（lb-m）') > 0) and
+           (stripos($this->current_page_body, 'PE（号-m）') > 0)) {
+          $this->current_page_body = str_ireplace('<th colspan="2">標準巻糸量</th>',
+            '<th>標準巻糸量ナイロン（lb-m）</th><th>標準巻糸量PE（号-m）</th>', $this->current_page_body);
+          $this->current_page_body = str_ireplace('<tr>
+<th>ナイロン（lb-m）</th>
+<th>PE（号-m）</th>
+</tr>',
+            '', $this->current_page_body); 
+        }
+        if ((stripos($this->current_page_body, '標準巻糸量') > 0) and 
+           (stripos($this->current_page_body, 'ナイロン<br>（号-m）') > 0) and
+           (stripos($this->current_page_body, 'PE<br>（号-m）') > 0)) {
+          $this->current_page_body = str_ireplace('<th colspan="2">標準巻糸量</th>',
+            '<th>標準巻糸量ナイロン（号-m）</th><th>標準巻糸量PE（号-m）</th>', $this->current_page_body);
+          $this->current_page_body = str_ireplace('<tr>
+<th>ナイロン<br>（号-m）</th>
+<th>PE<br>（号-m）</th>
+</tr>',
+            '', $this->current_page_body); 
+        }
+        if ((stripos($this->current_page_body, '標準巻糸量') > 0) and 
+           (stripos($this->current_page_body, 'ナイロン<br>（lb-m）') > 0) and
+           (stripos($this->current_page_body, 'エステル<br>（lb-m）') > 0) and 
+           (stripos($this->current_page_body, 'PE<br>（号-m）') > 0)) {
+          $this->current_page_body = str_ireplace('<th colspan="3">標準巻糸量</th>',
+            '<th>標準巻糸量ナイロン（lb-m）</th><th>標準巻糸量エステル（lb-m）</th><th>標準巻糸量PE（号-m）</th>', $this->current_page_body);
+          $this->current_page_body = str_ireplace('<tr>
+<th>ナイロン<br>（lb-m）</th>
+<th>PE<br>（号-m）</th>
+<th>エステル<br>（lb-m）</th>
+</tr>',
+            '', $this->current_page_body); 
+        }
+        if ((stripos($this->current_page_body, '標準巻糸量<br>（号-m）') > 0) and 
+           (stripos($this->current_page_body, 'ナイロン') > 0) and
+           (stripos($this->current_page_body, '付属糸') > 0)) {
+          $this->current_page_body = str_ireplace('<th colspan="2">標準巻糸量<br>（号-m）</th>',
+            '<th>標準巻糸量（号-m）ナイロン</th><th>標準巻糸量（号-m）付属糸</th>', $this->current_page_body);
+          $this->current_page_body = str_ireplace('<tr>
+<th>ナイロン</th>
+<th>付属糸</th>
+</tr>',
+            '', $this->current_page_body); 
+        }
+        if ((stripos($this->current_page_body, '標準巻糸量（号-m）') > 0) and 
+           (stripos($this->current_page_body, 'PE') > 0) and
+           (stripos($this->current_page_body, 'ナイロン') > 0)) {
+          $this->current_page_body = str_ireplace('<th colspan="2">標準巻糸量（号-m）</th>',
+            '<th>標準巻糸量（号-m）PE</th><th>標準巻糸量（号-m）ナイロン</th>', $this->current_page_body);
+          $this->current_page_body = str_ireplace('<tr>
+<th>PE</th>
+<th>ナイロン</th>
+</tr>',
+            '', $this->current_page_body); 
+        }
+        if ((stripos($this->current_page_body, '標準巻糸量（号-m）') > 0) and 
+           (stripos($this->current_page_body, 'ブライト') > 0) and
+           (stripos($this->current_page_body, 'ナイロン') > 0)) {
+          $this->current_page_body = str_ireplace('<th colspan="2">標準巻糸量（号-m）</th>',
+            '<th>標準巻糸量（号-m）ブライト</th><th>標準巻糸量（号-m）ナイロン</th>', $this->current_page_body);
+          $this->current_page_body = str_ireplace('<tr>
+<th>ブライト</th>
+<th>ナイロン</th>
+</tr>',
+            '', $this->current_page_body); 
+          $this->current_page_body = str_ireplace('<tr>
+<th>ブライト</th>
+<th>ナイロン</th>
+</tr>',
+            '', $this->current_page_body);
+        }
+        if ((stripos($this->current_page_body, '標準巻糸量<br>（号-m）') > 0) and 
+           (stripos($this->current_page_body, 'ブライト') > 0) and
+           (stripos($this->current_page_body, 'ナイロン') > 0)) {
+          $this->current_page_body = str_ireplace('<th colspan="2">標準巻糸量<br>（号-m）</th>',
+            '<th>標準巻糸量（号-m）ブライト</th><th>標準巻糸量（号-m）ナイロン</th>', $this->current_page_body);
+          $this->current_page_body = str_ireplace('<tr>
+<th rowspan="1" colspan="1">ブライト</th>
+<th rowspan="1" colspan="1">ナイロン</th>
+</tr>',
+            '', $this->current_page_body); 
+        }
+        if ((stripos($this->current_page_body, '標準巻糸量<br>（号-m）') > 0) and 
+           (stripos($this->current_page_body, 'ブライト（PE）') > 0) and
+           (stripos($this->current_page_body, 'ナイロン') > 0)) {
+          $this->current_page_body = str_ireplace('<th colspan="2">標準巻糸量<br>（号-m）</th>',
+            '<th>標準巻糸量（号-m）ブライト（PE）</th><th>標準巻糸量（号-m）ナイロン</th>', $this->current_page_body);
+          $this->current_page_body = str_ireplace('<tr>
+<th>ブライト（PE）</th>
+<th>ナイロン</th>
+</tr>',
+            '', $this->current_page_body); 
+        }
+        if ((stripos($this->current_page_body, '標準巻糸量<br>（号-m）') > 0) and 
+           (stripos($this->current_page_body, 'ブライト（PE）') > 0) and
+           (stripos($this->current_page_body, 'ナイロン（号）') > 0)) {
+          $this->current_page_body = str_ireplace('<th colspan="2">標準巻糸量<br>（号-m）</th>',
+            '<th>標準巻糸量（号-m）ブライト（PE）</th><th>標準巻糸量（号-m）ナイロン（号）</th>', $this->current_page_body);
+          $this->current_page_body = str_ireplace('<tr>
+<th>ブライト（PE）</th>
+<th>ナイロン（号）</th>
+</tr>',
+            '', $this->current_page_body); 
+        }
+        if ((stripos($this->current_page_body, '標準糸巻量') > 0) and 
+           ((stripos($this->current_page_body, 'ナイロン<br>（lb-m）') > 0) or (stripos($this->current_page_body, 'ナイロン<br />（lb-m）')>0)) and
+           ((stripos($this->current_page_body, 'PE<br>（号-m）') > 0) or (stripos($this->current_page_body, 'PE<br />（号-m）')>0))) {
+          $this->current_page_body = str_ireplace('<th colspan="2">標準糸巻量</th>',
+            '<th>標準糸巻量ナイロン（lb-m）</th><th>標準糸巻量PE（号-m）</th>', $this->current_page_body);
+          $this->current_page_body = str_ireplace('<tr>
+<th>ナイロン<br>（lb-m）</th>
+<th>PE<br>（号-m）</th>
+</tr>',
+            '', $this->current_page_body); 
+          $this->current_page_body = str_ireplace('<tr>
+<th>ナイロン<br />（lb-m）</th>
+<th>PE<br />（号-m）</th>
+</tr>',
+            '', $this->current_page_body);
+        }
+        if ((stripos($this->current_page_body, '標準巻糸量（号ｰm）') > 0) and 
+           ((stripos($this->current_page_body, 'ブライト<br>（PE）') > 0) or (stripos($this->current_page_body, 'ブライト<br />（PE）') > 0)) and
+           (stripos($this->current_page_body, 'ナイロン') > 0)) {
+          $this->current_page_body = str_ireplace('<th colspan="2">標準巻糸量（号ｰm）</th>',
+            '<th>標準巻糸量（号ｰm）ブライト（PE）</th><th>標準巻糸量（号ｰm）ナイロン</th>', $this->current_page_body);
+          $this->current_page_body = str_ireplace('<tr>
+<th>ブライト<br>（PE）</th>
+<th>ナイロン</th>
+</tr>',
+            '', $this->current_page_body); 
+          $this->current_page_body = str_ireplace('<tr>
+<th>ブライト<br />（PE）</th>
+<th>ナイロン</th>
+</tr>',
+            '', $this->current_page_body); 
+        }
+        @$this->current_page_DOM->loadHTML($this->current_page_body); // 
+        $this->current_page_xpath = new \DomXPath($this->current_page_DOM);
     }
 }
