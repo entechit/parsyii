@@ -1762,8 +1762,14 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
     */
     function pre_daiwa(){
         if ((stripos($this->current_page_body, '標準巻糸量') > 0) and 
-           ((stripos($this->current_page_body, 'ナイロン<br>（lb-m）') > 0) or (stripos($this->current_page_body, 'ナイロン<br />（lb-m）')>0)or(stripos($this->current_page_body, 'ナイロン<br>（lb.-m）') > 0)) and
-           ((stripos($this->current_page_body, 'PE<br>（号-m）') > 0) or (stripos($this->current_page_body, 'PE<br />（号-m）')>0))) {
+           ((stripos($this->current_page_body, 'ナイロン<br>（lb-m）') > 0) or (stripos($this->current_page_body, 'ナイロン（lb-m）') > 0) or (stripos($this->current_page_body, 'ナイロン<br />（lb-m）')>0)or
+            (stripos($this->current_page_body, '<th>ナイロン<br>
+（lb.-m）</th>') > 0)) and
+           ((stripos($this->current_page_body, 'PE<br>（号-m）') > 0) or (stripos($this->current_page_body, 'PE（号ｰm）') > 0) or (stripos($this->current_page_body, 'PE<br />（号-m）')>0) or
+            (stripos($this->current_page_body, '<th>PE<br>
+（号-m）</th>')>0))
+           ) 
+        {
           $this->current_page_body = str_ireplace('<th colspan="2">標準巻糸量</th>',
             '<th>標準巻糸量ナイロン（lb-m）</th><th>標準巻糸量PE（号-m）</th>', $this->current_page_body);
           $this->current_page_body = str_ireplace('<tr>
@@ -1771,6 +1777,11 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
 <th>PE<br>（号-m）</th>
 </tr>',
             '', $this->current_page_body); 
+           $this->current_page_body = str_ireplace('<tr>
+<th>ナイロン（lb-m）</th>
+<th>PE（号ｰm）</th>
+</tr>',
+            '', $this->current_page_body);
           $this->current_page_body = str_ireplace('<tr>
 <th>ナイロン<br />（lb-m）</th>
 <th>PE<br />（号-m）</th>
@@ -1794,8 +1805,8 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
             '', $this->current_page_body); 
         }
         if ((stripos($this->current_page_body, '標準巻糸量') > 0) and 
-           (stripos($this->current_page_body, 'ナイロン<br>（号-m）') > 0) and
-           (stripos($this->current_page_body, 'PE<br>（号-m）') > 0)) {
+           ((stripos($this->current_page_body, 'ナイロン<br>（号-m）') > 0) or (stripos($this->current_page_body, 'ナイロン<br />（号-m）') > 0)) and
+           ((stripos($this->current_page_body, 'PE<br>（号-m）') > 0) or (stripos($this->current_page_body, 'PE<br />（号-m）') > 0))) {
           $this->current_page_body = str_ireplace('<th colspan="2">標準巻糸量</th>',
             '<th>標準巻糸量ナイロン（号-m）</th><th>標準巻糸量PE（号-m）</th>', $this->current_page_body);
           $this->current_page_body = str_ireplace('<tr>
@@ -1803,11 +1814,17 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
 <th>PE<br>（号-m）</th>
 </tr>',
             '', $this->current_page_body); 
+          $this->current_page_body = str_ireplace('<tr>
+<th>ナイロン<br />（号-m）</th>
+<th>PE<br />（号-m）</th>
+</tr>
+<tr>',
+            '', $this->current_page_body);
         }
         if ((stripos($this->current_page_body, '標準巻糸量') > 0) and 
-           (stripos($this->current_page_body, 'ナイロン<br>（lb-m）') > 0) and
-           (stripos($this->current_page_body, 'エステル<br>（lb-m）') > 0) and 
-           (stripos($this->current_page_body, 'PE<br>（号-m）') > 0)) {
+           ((stripos($this->current_page_body, 'ナイロン<br>（lb-m）') > 0) or (stripos($this->current_page_body, 'ナイロン<br />（lb-m）') > 0)) and
+           ((stripos($this->current_page_body, 'エステル<br>（lb-m）') > 0) or (stripos($this->current_page_body, 'エステル<br />（lb-m）') > 0)) and 
+           ((stripos($this->current_page_body, 'PE<br>（号-m）') > 0)) or (stripos($this->current_page_body, 'PE<br />（号-m）') > 0)) {
           $this->current_page_body = str_ireplace('<th colspan="3">標準巻糸量</th>',
             '<th>標準巻糸量ナイロン（lb-m）</th><th>標準巻糸量エステル（lb-m）</th><th>標準巻糸量PE（号-m）</th>', $this->current_page_body);
           $this->current_page_body = str_ireplace('<tr>
@@ -1816,6 +1833,12 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
 <th>エステル<br>（lb-m）</th>
 </tr>',
             '', $this->current_page_body); 
+          $this->current_page_body = str_ireplace('<tr>
+<th>ナイロン<br />（lb-m）</th>
+<th>PE<br />（号-m）</th>
+<th>エステル<br />（lb-m）</th>
+</tr>',
+            '', $this->current_page_body);
         }
         if ((stripos($this->current_page_body, '標準巻糸量<br>（号-m）') > 0) and 
            (stripos($this->current_page_body, 'ナイロン') > 0) and
@@ -1844,14 +1867,16 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
            (stripos($this->current_page_body, 'ナイロン') > 0)) {
           $this->current_page_body = str_ireplace('<th colspan="2">標準巻糸量（号-m）</th>',
             '<th>標準巻糸量（号-m）ブライト</th><th>標準巻糸量（号-m）ナイロン</th>', $this->current_page_body);
+          $this->current_page_body = str_ireplace('<th rowspan="1" colspan="2">標準巻糸量（号-m）</th>',
+            '<th>標準巻糸量（号-m）ブライト</th><th>標準巻糸量（号-m）ナイロン</th>', $this->current_page_body);
           $this->current_page_body = str_ireplace('<tr>
 <th>ブライト</th>
 <th>ナイロン</th>
 </tr>',
             '', $this->current_page_body); 
-          $this->current_page_body = str_ireplace('<tr>
-<th>ブライト</th>
-<th>ナイロン</th>
+         $this->current_page_body = str_ireplace('<tr>
+<th rowspan="1" colspan="1">ブライト</th>
+<th rowspan="1" colspan="1">ナイロン</th>
 </tr>',
             '', $this->current_page_body);
         }
@@ -1860,6 +1885,11 @@ $this->add_trace('Tab_analyse 2  parname = '.$parname,'value', __FUNCTION__);
            (stripos($this->current_page_body, 'ナイロン') > 0)) {
           $this->current_page_body = str_ireplace('<th colspan="2">標準巻糸量<br>（号-m）</th>',
             '<th>標準巻糸量（号-m）ブライト</th><th>標準巻糸量（号-m）ナイロン</th>', $this->current_page_body);
+          $this->current_page_body = str_ireplace('<tr>
+<th>ブライト</th>
+<th>ナイロン</th>
+</tr>',
+            '', $this->current_page_body);  
           $this->current_page_body = str_ireplace('<tr>
 <th rowspan="1" colspan="1">ブライト</th>
 <th rowspan="1" colspan="1">ナイロン</th>
